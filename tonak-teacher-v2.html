@@ -1,0 +1,1280 @@
+<!DOCTYPE html>
+<html lang="is">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>TONAK — Kennaraapp</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700;800&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#050d18;
+  --sky:#38bdf8;
+  --sky2:#0ea5e9;
+  --sky-soft:rgba(56,189,248,0.18);
+  --text:#e8f4ff;
+  --text-dim:rgba(255,255,255,0.42);
+  --text-dimmer:rgba(255,255,255,0.24);
+  --border:rgba(255,255,255,0.08);
+  --card:rgba(255,255,255,0.04);
+  --card-b:rgba(255,255,255,0.07);
+  --green:#22c55e;
+  --amber:#f59e0b;
+  --red:#ef4444;
+  --gold:rgba(250,200,50,0.88);
+  --gold-bg:rgba(120,80,10,0.18);
+  --gold-border:rgba(200,150,30,0.3);
+  --purple:#7c3aed;
+  --purple2:#1d4ed8;
+}
+html,body{height:100%;background:#030810;display:flex;align-items:center;justify-content:center;font-family:'Nunito',sans-serif}
+.phone{width:390px;height:844px;background:var(--bg);border-radius:50px;overflow:hidden;position:relative;border:1.5px solid rgba(56,189,248,0.12);box-shadow:0 40px 120px rgba(0,0,0,0.6)}
+@media(max-height:900px){.phone{width:360px;height:780px;border-radius:44px}}
+@media(max-height:820px){.phone{width:340px;height:700px;border-radius:40px}}
+
+canvas#stars{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.orb{position:absolute;border-radius:50%;filter:blur(65px);pointer-events:none}
+
+.screen{position:absolute;inset:0;display:flex;flex-direction:column;opacity:0;pointer-events:none;transition:opacity .3s ease}
+.screen.active{opacity:1;pointer-events:all}
+
+/* ── TOPBAR ── */
+.topbar{display:flex;justify-content:space-between;align-items:center;padding:16px 24px 4px;flex-shrink:0;z-index:10}
+.teacher-info{display:flex;flex-direction:column}
+.teacher-name{font-family:'Baloo 2',sans-serif;font-size:16px;font-weight:700;color:var(--text);line-height:1.1}
+.teacher-date{font-size:11px;color:var(--text-dim)}
+.sick-btn{display:flex;align-items:center;gap:5px;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);border-radius:12px;padding:6px 12px;cursor:pointer;transition:all .2s}
+.sick-btn:active{transform:scale(0.95)}
+.sick-txt{font-size:11px;font-weight:700;color:rgba(239,68,68,0.8)}
+
+/* ── STATS ROW ── */
+.stats-row{display:flex;gap:8px;padding:8px 20px 0;flex-shrink:0}
+.stat-card{flex:1;background:var(--card);border:1px solid var(--card-b);border-radius:14px;padding:9px 10px;text-align:center}
+.stat-num{font-family:'Baloo 2',sans-serif;font-size:22px;font-weight:800;color:var(--sky);line-height:1}
+.stat-lbl{font-size:9px;color:var(--text-dim);margin-top:2px;font-weight:600;letter-spacing:.3px}
+
+/* ── STUDENT LIST ── */
+.day-scroll{flex:1;overflow-y:auto;padding:10px 20px 0}
+.day-scroll::-webkit-scrollbar{display:none}
+.section-lbl{font-size:9px;font-weight:700;letter-spacing:1.8px;color:var(--text-dimmer);margin:8px 0 8px}
+
+.student-card{background:var(--card);border:1px solid var(--card-b);border-radius:18px;padding:13px 16px;margin-bottom:8px;cursor:pointer;transition:all .2s;position:relative}
+.student-card:active{transform:scale(0.98)}
+.student-card.done{border-color:rgba(34,197,94,0.2);background:rgba(34,197,94,0.04)}
+.student-card.next{border-color:rgba(56,189,248,0.35);background:rgba(56,189,248,0.05);box-shadow:0 0 14px rgba(56,189,248,0.1)}
+
+.sc-top{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.sc-time{font-family:'Baloo 2',sans-serif;font-size:16px;font-weight:800;color:var(--sky);min-width:42px}
+.sc-name{font-family:'Baloo 2',sans-serif;font-size:15px;font-weight:700;color:var(--text);flex:1}
+.sc-status{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+.sc-status.pending{background:rgba(255,255,255,0.06);border:1.5px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.3)}
+.sc-status.present{background:rgba(34,197,94,0.15);border:1.5px solid rgba(34,197,94,0.35);color:var(--green)}
+.sc-status.late{background:rgba(245,158,11,0.15);border:1.5px solid rgba(245,158,11,0.35);color:var(--amber)}
+.sc-status.absent{background:rgba(239,68,68,0.12);border:1.5px solid rgba(239,68,68,0.25);color:var(--red)}
+
+.sc-meta{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text-dim)}
+.sc-dot{width:4px;height:4px;border-radius:50%;background:rgba(255,255,255,0.2)}
+.sc-streak{display:flex;align-items:center;gap:4px;background:rgba(250,200,50,0.08);border:1px solid rgba(250,200,50,0.2);border-radius:8px;padding:2px 7px;font-size:10px;font-weight:700;color:rgba(250,200,50,0.7)}
+
+/* sticker button on done cards */
+.sticker-row{display:flex;align-items:center;gap:8px;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.05)}
+.sticker-btn{display:flex;align-items:center;gap:6px;background:rgba(109,40,217,0.15);border:1px solid rgba(150,100,255,0.28);border-radius:10px;padding:5px 12px;cursor:pointer;transition:all .15s;flex:1}
+.sticker-btn:active{transform:scale(0.96)}
+.sticker-btn-txt{font-size:11px;font-weight:700;color:rgba(200,170,255,0.8)}
+.sticker-btn.rare{background:rgba(120,80,10,0.18);border-color:rgba(200,150,30,0.3)}
+.sticker-btn.rare .sticker-btn-txt{color:rgba(255,200,60,0.8)}
+.sticker-sent{display:flex;align-items:center;gap:5px;font-size:11px;color:rgba(34,197,94,0.65);font-weight:600}
+
+/* tabbar */
+.tabbar{display:flex;padding:4px 14px 16px;gap:2px;flex-shrink:0}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:7px 2px;border-radius:13px;border:none;background:transparent;cursor:pointer;transition:background .15s}
+.tab.active{background:rgba(56,189,248,0.08)}
+.tab-i{font-size:16px}
+.tab-l{font-size:8px;color:var(--text-dimmer);font-weight:600;letter-spacing:.3px}
+.tab.active .tab-l{color:rgba(56,189,248,0.7)}
+
+/* ── ATTENDANCE SHEET ── */
+#att-sheet{z-index:30;background:rgba(5,13,24,0.92)}
+.att-inner{position:absolute;bottom:0;left:0;right:0;background:#0a1628;border-radius:28px 28px 0 0;border:1px solid rgba(56,189,248,0.12);border-bottom:none;padding:0 22px 28px;animation:slideup .3s ease-out forwards}
+@keyframes slideup{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.handle{width:40px;height:4px;border-radius:2px;background:rgba(255,255,255,0.12);margin:14px auto 18px}
+.att-name{font-family:'Baloo 2',sans-serif;font-size:19px;font-weight:800;color:var(--text);margin:0 0 3px}
+.att-meta{font-size:11px;color:var(--text-dim);margin:0 0 18px}
+.att-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:16px}
+.att-btn{height:54px;border-radius:16px;border:1.5px solid;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;font-family:'Baloo 2',sans-serif;font-size:14px;font-weight:700;transition:all .2s}
+.att-btn:active{transform:scale(0.96)}
+.att-btn.present{border-color:rgba(34,197,94,0.3);background:rgba(34,197,94,0.08);color:rgba(34,197,94,0.85)}
+.att-btn.late{border-color:rgba(245,158,11,0.3);background:rgba(245,158,11,0.08);color:rgba(245,158,11,0.85)}
+.att-btn.absent{border-color:rgba(239,68,68,0.25);background:rgba(239,68,68,0.07);color:rgba(239,68,68,0.8)}
+.att-btn.forfoll{border-color:rgba(255,255,255,0.12);background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.45)}
+.att-btn.sel{transform:scale(1.03)}
+.att-btn.present.sel{border-color:rgba(34,197,94,0.7);background:rgba(34,197,94,0.18);box-shadow:0 0 14px rgba(34,197,94,0.2)}
+.att-btn.late.sel{border-color:rgba(245,158,11,0.7);background:rgba(245,158,11,0.18);box-shadow:0 0 14px rgba(245,158,11,0.2)}
+.att-btn.absent.sel{border-color:rgba(239,68,68,0.6);background:rgba(239,68,68,0.14)}
+.att-btn.forfoll.sel{border-color:rgba(255,255,255,0.3);background:rgba(255,255,255,0.08)}
+
+/* homework area */
+.hw-area{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:12px 14px;margin-bottom:14px}
+.hw-label{font-size:9px;font-weight:700;letter-spacing:1.5px;color:rgba(56,189,248,0.4);margin:0 0 8px}
+.hw-input{width:100%;background:transparent;border:none;outline:none;font-family:'Nunito',sans-serif;font-size:13px;color:var(--text);resize:none;min-height:40px;line-height:1.5}
+.hw-input::placeholder{color:rgba(255,255,255,0.2)}
+
+/* save button */
+.save-btn{width:100%;height:58px;border-radius:18px;border:none;font-family:'Baloo 2',sans-serif;font-size:16px;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px}
+.save-btn.ready{background:linear-gradient(135deg,#0369a1,#0e7490);color:#fff;box-shadow:0 6px 22px rgba(3,105,161,0.35)}
+.save-btn.ready:active{transform:scale(0.97)}
+.save-btn.wait{background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.3);border:1px solid rgba(255,255,255,0.1)}
+
+/* ── STICKER PICK SHEET ── */
+#sticker-sheet{z-index:40;background:rgba(3,5,15,0.9)}
+.sp-inner{position:absolute;bottom:0;left:0;right:0;background:#07051a;border-radius:28px 28px 0 0;border:1px solid rgba(124,58,237,0.18);border-bottom:none;padding:0 20px 24px;animation:slideup .35s ease-out forwards}
+.sp-student{font-family:'Baloo 2',sans-serif;font-size:14px;font-weight:800;color:var(--text);margin:0 0 4px}
+.sp-desc{font-size:12px;color:var(--text-dim);line-height:1.6;margin:0 0 8px}
+.rare-banner{display:flex;align-items:center;gap:7px;background:var(--gold-bg);border:1px solid var(--gold-border);border-radius:10px;padding:7px 12px;margin-bottom:8px}
+.rub{font-size:11px;color:var(--gold);font-weight:700}
+.serie-row{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:2px}
+.serie-row::-webkit-scrollbar{display:none}
+.spill{display:inline-flex;align-items:center;gap:4px;background:rgba(100,70,200,0.2);border:1px solid rgba(150,120,255,0.28);border-radius:10px;padding:4px 12px;font-size:10px;font-weight:700;color:rgba(200,170,255,0.7);white-space:nowrap;flex-shrink:0}
+.spill.off{background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.07);color:rgba(255,255,255,0.22)}
+.sp-scroll{max-height:220px;overflow-y:auto;padding:8px 0 0}
+.sp-scroll::-webkit-scrollbar{display:none}
+.sp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:10px}
+
+.pcell{aspect-ratio:1;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;position:relative;transition:all .25s cubic-bezier(.34,1.4,.64,1);cursor:default;user-select:none}
+.pcell.avail{background:rgba(180,180,200,0.05);border:1.5px solid rgba(180,180,200,0.12);cursor:pointer}
+.pcell.avail:active{transform:scale(0.93)}
+.pcell.owned{background:rgba(80,50,160,0.1);border:1.5px solid rgba(150,120,255,0.22)}
+.pcell.sel{background:radial-gradient(circle at 40% 35%,rgba(180,150,255,0.22),rgba(80,50,200,0.38));border:1.5px solid rgba(200,170,255,0.65);box-shadow:0 0 20px rgba(124,58,237,0.38);transform:scale(1.07)}
+.pcell.rare-avail{background:rgba(120,80,10,0.09);border:1.5px solid rgba(200,150,30,0.22);cursor:pointer;animation:rareglow 2.5s ease-in-out infinite}
+@keyframes rareglow{0%,100%{box-shadow:0 0 8px rgba(250,180,30,0.15)}50%{box-shadow:0 0 22px rgba(250,180,30,0.45),0 0 40px rgba(250,150,0,0.15)}}
+.pcell.rare-sel{background:radial-gradient(circle at 40% 35%,rgba(255,200,80,0.2),rgba(100,50,10,0.38));border:1.5px solid rgba(250,200,50,0.5);box-shadow:0 0 20px rgba(200,150,30,0.32);transform:scale(1.07)}
+.pcell.rare-lock{background:rgba(60,40,5,0.12);border:1.5px solid rgba(180,130,30,0.22);cursor:default}
+.rare-lock-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border-radius:15px;background:rgba(10,6,2,0.45)}
+.rare-lock-overlay .rl-icon{font-size:14px;line-height:1}
+.rare-lock-overlay .rl-txt{font-size:7px;font-weight:700;color:rgba(200,150,40,0.7);letter-spacing:.3px}
+.pc-emoji{font-size:28px;line-height:1;transition:all .3s}
+.pcell.avail .pc-emoji{filter:grayscale(1) brightness(0.5)}
+.pcell.rare-lock .pc-emoji{filter:grayscale(1) brightness(0.35) sepia(0.3)}
+.pcell.owned .pc-emoji{filter:none;opacity:.75}
+.pcell.sel .pc-emoji,.pcell.rare-sel .pc-emoji,.pcell.rare-avail .pc-emoji{filter:none}
+.pcell.sel .pc-emoji,.pcell.rare-sel .pc-emoji{transform:scale(1.12)}
+.pc-name{font-size:8.5px;font-weight:700;text-align:center;line-height:1.2;padding:0 3px;transition:color .3s}
+.pcell.avail .pc-name{color:rgba(180,180,200,0.24)}
+.pcell.rare-lock .pc-name{color:rgba(180,140,40,0.5)}
+.pcell.owned .pc-name{color:rgba(200,180,255,0.48)}
+.pcell.sel .pc-name{color:rgba(220,200,255,0.87)}
+.pcell.rare-avail .pc-name{color:rgba(200,150,40,0.6)}
+.pcell.rare-sel .pc-name{color:rgba(255,210,80,0.87)}
+.pc-tick{position:absolute;top:4px;right:4px;width:13px;height:13px;border-radius:50%;background:rgba(100,200,120,0.18);display:flex;align-items:center;justify-content:center;font-size:7px;color:rgba(150,230,150,0.65)}
+.pc-rare-pip{position:absolute;top:-4px;right:-4px;background:linear-gradient(135deg,#78350f,#92400e);border-radius:5px;padding:1px 4px;font-size:6.5px;font-weight:800;color:rgba(255,210,80,0.92);font-family:'Baloo 2',sans-serif}
+.sp-confirm{width:100%;height:56px;border-radius:18px;border:none;font-family:'Baloo 2',sans-serif;font-size:15px;font-weight:800;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px}
+.sp-confirm.ready{background:linear-gradient(135deg,#6d28d9,#1d4ed8);color:#fff;box-shadow:0 6px 22px rgba(109,40,217,0.38)}
+.sp-confirm.ready:active{transform:scale(0.97)}
+.sp-confirm.wait{background:rgba(255,255,255,0.07);color:rgba(255,255,255,0.45);border:1.5px solid rgba(255,255,255,0.14)}
+.sp-note{font-size:10px;color:var(--text-dimmer);text-align:center;margin:5px 0 0}
+
+/* OR send to parent */
+.or-row{display:flex;align-items:center;gap:8px;margin:10px 0 8px}
+.or-line{flex:1;height:1px;background:rgba(255,255,255,0.07)}
+.or-txt{font-size:10px;color:var(--text-dimmer)}
+.send-parent-btn{width:100%;height:46px;border-radius:14px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.5);font-family:'Baloo 2',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all .15s}
+.send-parent-btn:active{transform:scale(0.97);background:rgba(255,255,255,0.08)}
+
+/* ── STAMP OVERLAY ── */
+#stamp-overlay{z-index:50}
+.stamp-inner-full{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;background:var(--bg)}
+.stamp-glow{position:absolute;top:35%;left:50%;transform:translate(-50%,-50%);width:200px;height:200px;border-radius:50%;background:radial-gradient(circle,rgba(109,40,217,0.2),transparent 70%);pointer-events:none}
+.stamp-wrap{position:relative;width:130px;height:130px;display:flex;align-items:center;justify-content:center;margin-bottom:18px}
+.stamp-e{font-size:68px;line-height:1;animation:sin .5s cubic-bezier(.34,1.56,.64,1) forwards}
+@keyframes sin{0%{transform:scale(2.8) rotate(-14deg);opacity:0}100%{transform:scale(1) rotate(0);opacity:1}}
+.sr1{position:absolute;inset:0;border-radius:50%;border:2px solid rgba(200,170,255,0.5);animation:rout .6s ease-out forwards}
+.sr2{position:absolute;inset:-9px;border-radius:50%;border:1px solid rgba(200,170,255,0.22);animation:rout .75s .1s ease-out forwards}
+@keyframes rout{0%{transform:scale(.35);opacity:1}100%{transform:scale(2.3);opacity:0}}
+.sname{font-family:'Baloo 2',sans-serif;font-size:22px;font-weight:800;color:var(--text);text-align:center;margin:0 0 4px;animation:fup .4s .32s ease-out both}
+.stag{font-size:10px;color:rgba(200,170,255,0.4);margin:0 0 12px;letter-spacing:.5px;text-align:center;animation:fup .4s .42s ease-out both}
+.squote{font-size:13px;color:rgba(255,255,255,0.48);text-align:center;font-style:italic;line-height:1.6;margin:0 0 12px;animation:fup .4s .52s ease-out both}
+.saved-pill{display:inline-flex;align-items:center;gap:6px;background:rgba(5,150,105,0.14);border:1px solid rgba(5,150,105,0.28);border-radius:12px;padding:7px 16px;font-size:12px;font-weight:700;color:rgba(110,230,160,0.75);margin-bottom:22px;animation:fup .4s .62s ease-out both}
+.saved-dot{width:6px;height:6px;border-radius:50%;background:rgba(110,230,160,0.75);animation:sdot 2s infinite}
+@keyframes sdot{0%,100%{opacity:1}50%{opacity:.4}}
+.stamp-close{width:100%;height:54px;border-radius:18px;background:rgba(255,255,255,0.09);border:1.5px solid rgba(255,255,255,0.2);color:#fff;font-family:'Baloo 2',sans-serif;font-size:15px;font-weight:700;cursor:pointer;animation:fup .4s .78s ease-out both;transition:transform .15s}
+.stamp-close:active{transform:scale(0.97)}
+@keyframes fup{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.pts{position:absolute;border-radius:50%;animation:ptfly var(--d) var(--dl) ease-out forwards;pointer-events:none}
+@keyframes ptfly{0%{opacity:1;transform:translate(0,0)}100%{opacity:0;transform:translate(var(--tx),var(--ty))}}
+
+/* sent to parent overlay */
+.sent-overlay{position:absolute;inset:0;z-index:60;background:rgba(5,13,24,0.9);display:flex;align-items:center;justify-content:center;animation:fdin .3s ease-out}
+@keyframes fdin{from{opacity:0}to{opacity:1}}
+.sent-card{background:#0a1628;border:1px solid rgba(56,189,248,0.2);border-radius:24px;padding:28px 24px;text-align:center;width:80%}
+.sent-icon{font-size:44px;margin-bottom:14px}
+.sent-title{font-family:'Baloo 2',sans-serif;font-size:18px;font-weight:800;color:var(--text);margin:0 0 8px}
+.sent-sub{font-size:13px;color:var(--text-dim);line-height:1.6;margin:0 0 20px}
+.sent-ok{width:100%;height:48px;border-radius:14px;background:rgba(56,189,248,0.12);border:1px solid rgba(56,189,248,0.25);color:rgba(56,189,248,0.8);font-family:'Baloo 2',sans-serif;font-size:14px;font-weight:700;cursor:pointer}
+
+/* snack */
+.snack{position:absolute;bottom:90px;left:50%;transform:translateX(-50%);background:rgba(10,22,40,0.96);border:1px solid rgba(56,189,248,0.3);border-radius:14px;padding:10px 18px;font-size:13px;color:#7dd3fc;z-index:200;white-space:nowrap;backdrop-filter:blur(20px);animation:snackin .3s ease;pointer-events:none}
+@keyframes snackin{from{opacity:0;transform:translateX(-50%) translateY(8px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+
+/* veikindi modal */
+.modal-bg{position:absolute;inset:0;background:rgba(4,5,12,0.88);display:flex;align-items:center;justify-content:center;z-index:80;animation:fdin .2s ease;padding:24px}
+.modal-box{background:linear-gradient(145deg,#13192d,#08090f);border-radius:24px;padding:28px 24px;width:100%;max-width:340px;border:1px solid rgba(239,68,68,0.22)}
+
+/* nemendur screen */
+#nemendur{z-index:10;overflow-y:auto}
+.nem-scroll{flex:1;overflow-y:auto;padding:8px 20px 0}
+.nem-scroll::-webkit-scrollbar{display:none}
+.nem-item{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:16px;background:var(--card);border:1px solid var(--card-b);margin-bottom:8px}
+.nem-avatar{width:38px;height:38px;border-radius:13px;background:linear-gradient(135deg,rgba(14,165,233,0.15),rgba(6,182,212,0.1));border:1px solid rgba(56,189,248,0.2);display:flex;align-items:center;justify-content:center;font-family:'Baloo 2',sans-serif;font-size:15px;font-weight:700;color:#7dd3fc;flex-shrink:0}
+.nem-name{font-family:'Baloo 2',sans-serif;font-size:14px;font-weight:700;color:var(--text)}
+.nem-meta{font-size:10px;color:var(--text-dim);margin-top:2px}
+.nem-time{text-align:right;flex-shrink:0}
+.nem-t{font-size:12px;font-weight:700;color:var(--sky)}
+.nem-s{font-size:10px;color:var(--text-dimmer);margin-top:2px}
+.rep-item{padding:9px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:13px;color:rgba(255,255,255,0.6)}
+.rep-more{padding-top:10px;font-size:12px;color:rgba(56,189,248,0.4);text-align:center}
+
+/* matur screen */
+.mat-scroll{flex:1;overflow-y:auto;padding:14px 0 8px}
+.mat-scroll::-webkit-scrollbar{display:none}
+#skilabod{z-index:10;overflow-y:auto}
+.skil-scroll{flex:1;overflow-y:auto;padding:8px 20px 0}
+.skil-scroll::-webkit-scrollbar{display:none}
+.skil-btn{width:100%;text-align:left;padding:14px;border-radius:18px;border:1px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.03);color:#fff;margin-bottom:8px;cursor:pointer;transition:all .2s;font-family:'Nunito',sans-serif}
+.skil-btn.unread{background:rgba(56,189,248,0.06);border-color:rgba(56,189,248,0.2)}
+.skil-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px}
+.skil-fra{font-size:13px;font-weight:700;color:rgba(255,255,255,0.7)}
+.skil-btn.unread .skil-fra{color:#7dd3fc}
+.skil-barn{font-size:10px;color:rgba(255,255,255,0.28);margin-top:1px}
+.skil-meta{display:flex;align-items:center;gap:6px}
+.skil-dot{width:7px;height:7px;border-radius:50%;background:#38bdf8;box-shadow:0 0 6px rgba(56,189,248,0.7)}
+.skil-kl{font-size:10px;color:rgba(255,255,255,0.22)}
+.skil-txt{font-size:12px;color:rgba(255,255,255,0.42);line-height:1.55}
+/* skilaboð modal */
+.skil-modal-bg{position:absolute;inset:0;background:rgba(4,5,12,0.88);display:flex;align-items:flex-end;justify-content:center;z-index:80;animation:fdin .2s ease}
+.skil-modal{background:linear-gradient(180deg,#10172a 0%,#08090f 100%);border:1px solid rgba(56,189,248,0.15);border-radius:28px 28px 0 0;padding:20px 20px 36px;width:100%;max-height:85vh;overflow-y:auto}
+.skil-modal-handle{width:36px;height:4px;border-radius:2px;background:rgba(255,255,255,0.12);margin:0 auto 20px}
+.skil-modal-txt{background:rgba(255,255,255,0.04);border-radius:14px;padding:14px 16px;margin-bottom:14px;font-size:14px;color:rgba(255,255,255,0.78);line-height:1.65}
+.skil-input{width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:12px 15px;color:#fff;font-size:14px;outline:none;resize:none;font-family:'Nunito',sans-serif;transition:border-color .2s}
+.skil-input:focus{border-color:rgba(56,189,248,0.35)}
+.skil-input::placeholder{color:rgba(255,255,255,0.25)}
+
+/* repertoire select */
+.rep-select{width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(56,189,248,0.2);border-radius:14px;padding:10px 14px;color:#fff;font-size:13px;outline:none;appearance:none;cursor:pointer;font-family:'Nunito',sans-serif;margin-bottom:8px}
+.rep-select option{background:#10172a;color:#fff}
+
+/* tónleikar screen */
+#tonleikar{z-index:10;overflow-y:auto}
+.ton-scroll{flex:1;overflow-y:auto;padding:8px 20px 0}
+.ton-scroll::-webkit-scrollbar{display:none}
+.ton-card{background:var(--card);border:1px solid var(--card-b);border-radius:20px;padding:16px;margin-bottom:12px}
+.ton-card.opid{border-color:rgba(56,189,248,0.25);background:rgba(56,189,248,0.04)}
+.ton-card.lokid{opacity:0.5}
+.ton-header{display:flex;align-items:flex-start;gap:12px;margin-bottom:12px}
+.ton-icon{width:40px;height:40px;border-radius:13px;background:rgba(56,189,248,0.1);border:1px solid rgba(56,189,248,0.2);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.ton-titill{font-family:'Baloo 2',sans-serif;font-size:15px;font-weight:700;color:var(--text);line-height:1.2}
+.ton-meta{font-size:11px;color:var(--text-dim);margin-top:3px}
+.ton-progress{margin-bottom:12px}
+.ton-prog-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.ton-prog-lbl{font-size:10px;color:var(--text-dimmer)}
+.ton-prog-num{font-size:10px;font-weight:700;color:var(--sky)}
+.ton-bar{height:6px;background:rgba(255,255,255,0.07);border-radius:3px;overflow:hidden}
+.ton-bar-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,#0ea5e9,#38bdf8);transition:width .4s ease}
+.ton-bar-fill.full{background:linear-gradient(90deg,#22c55e,#4ade80)}
+.ton-nemendur{border-top:1px solid rgba(255,255,255,0.05);padding-top:10px}
+.ton-nem-item{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.03)}
+.ton-nem-item:last-child{border:none}
+.ton-nem-name{font-size:13px;color:rgba(255,255,255,0.75);flex:1}
+.ton-nem-verk{font-size:11px;color:rgba(56,189,248,0.5);flex:2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ton-skra-btn{width:100%;height:42px;border-radius:14px;border:1.5px solid rgba(56,189,248,0.28);background:rgba(56,189,248,0.07);color:rgba(56,189,248,0.8);font-family:'Baloo 2',sans-serif;font-size:13px;font-weight:700;cursor:pointer;margin-top:10px;transition:all .2s}
+.ton-skra-btn:active{transform:scale(0.97)}
+.ton-full-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.25);border-radius:8px;padding:3px 10px;font-size:10px;font-weight:700;color:rgba(134,239,172,0.7);margin-top:10px}
+
+/* tónleikar skráningargluggi */
+.ton-modal-bg{position:absolute;inset:0;background:rgba(4,5,12,0.88);display:flex;align-items:flex-end;justify-content:center;z-index:80;animation:fdin .2s ease}
+.ton-modal{background:linear-gradient(180deg,#10172a 0%,#08090f 100%);border:1px solid rgba(56,189,248,0.15);border-radius:28px 28px 0 0;padding:20px 20px 36px;width:100%}
+.ton-modal-handle{width:36px;height:4px;border-radius:2px;background:rgba(255,255,255,0.12);margin:0 auto 18px}
+.ton-field-lbl{font-size:9px;font-weight:700;letter-spacing:1.5px;color:rgba(56,189,248,0.4);margin:0 0 6px}
+.ton-input{width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:11px 14px;color:#fff;font-size:14px;outline:none;font-family:'Nunito',sans-serif;transition:border-color .2s;margin-bottom:12px}
+.ton-input:focus{border-color:rgba(56,189,248,0.4)}
+.ton-input::placeholder{color:rgba(255,255,255,0.22)}
+.ton-nem-select{width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(56,189,248,0.2);border-radius:14px;padding:11px 14px;color:#fff;font-size:14px;outline:none;appearance:none;cursor:pointer;font-family:'Nunito',sans-serif;margin-bottom:12px}
+.ton-nem-select option{background:#10172a;color:#fff}
+</style>
+</head>
+<body>
+<div class="phone" id="phone">
+  <canvas id="stars"></canvas>
+  <div class="orb" style="width:180px;height:180px;top:-50px;right:-50px;background:#0369a1;opacity:.09"></div>
+  <div class="orb" style="width:140px;height:140px;bottom:140px;left:-40px;background:#0891b2;opacity:.07"></div>
+  <div class="orb" style="width:100px;height:100px;top:200px;right:-20px;background:#22d3ee;opacity:.05"></div>
+
+  <!-- ── HOME ── -->
+  <div class="screen active" id="home">
+    <div class="topbar">
+      <div class="teacher-info">
+        <div class="teacher-name">Jón Sigurðsson</div>
+        <div class="teacher-date" id="today-date"></div>
+      </div>
+      <button class="sick-btn" onclick="openVeikindi()">
+        <span>🤒</span><span class="sick-txt">Ég er veikur</span>
+      </button>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-num" id="stat-done">0</div><div class="stat-lbl">SKRÁÐ</div></div>
+      <div class="stat-card"><div class="stat-num" id="stat-left">4</div><div class="stat-lbl">EFTIR</div></div>
+      <div class="stat-card"><div class="stat-num">4</div><div class="stat-lbl">ALLS Í DAG</div></div>
+    </div>
+
+    <div class="day-scroll">
+      <p class="section-lbl">DAGURINN MINN</p>
+      <div id="student-list"></div>
+    </div>
+
+    <div class="tabbar" id="tabbar">
+      <button class="tab active" onclick="setTab('home')"><span class="tab-i">📅</span><span class="tab-l">Dagurinn</span></button>
+      <button class="tab" onclick="setTab('nemendur')"><span class="tab-i">👥</span><span class="tab-l">Nemendur</span></button>
+      <button class="tab" onclick="setTab('tonleikar')"><span class="tab-i">🎵</span><span class="tab-l">Tónleikar</span></button>
+      <button class="tab" onclick="setTab('matur')"><span class="tab-i">🍽️</span><span class="tab-l">Matur</span></button>
+      <button class="tab" onclick="setTab('skilabod')" id="tab-skil"><span class="tab-i">✉️</span><span class="tab-l" id="tab-skil-lbl">Skilaboð</span></button>
+    </div>
+  </div>
+
+  <!-- ── NEMENDUR SCREEN ── -->
+  <div class="screen" id="nemendur">
+    <div class="topbar">
+      <div class="teacher-info">
+        <div class="teacher-name">Jón Sigurðsson</div>
+        <div class="teacher-date" id="today-date2"></div>
+      </div>
+    </div>
+    <div class="nem-scroll" id="nem-list"></div>
+    <div class="tabbar">
+      <button class="tab" onclick="setTab('home')"><span class="tab-i">📅</span><span class="tab-l">Dagurinn</span></button>
+      <button class="tab active" onclick="setTab('nemendur')"><span class="tab-i">👥</span><span class="tab-l">Nemendur</span></button>
+      <button class="tab" onclick="setTab('tonleikar')"><span class="tab-i">🎵</span><span class="tab-l">Tónleikar</span></button>
+      <button class="tab" onclick="setTab('matur')"><span class="tab-i">🍽️</span><span class="tab-l">Matur</span></button>
+      <button class="tab" onclick="setTab('skilabod')" id="tab-skil2"><span class="tab-i">✉️</span><span class="tab-l" id="tab-skil-lbl2">Skilaboð</span></button>
+    </div>
+  </div>
+
+  <!-- ── TÓNLEIKAR SCREEN ── -->
+  <div class="screen" id="tonleikar">
+    <div class="topbar">
+      <div class="teacher-info">
+        <div class="teacher-name">Tónleikar</div>
+        <div style="font-size:11px;color:var(--text-dim)">Skráning nemenda</div>
+      </div>
+    </div>
+    <div class="ton-scroll" id="ton-list"></div>
+    <div class="tabbar">
+      <button class="tab" onclick="setTab('home')"><span class="tab-i">📅</span><span class="tab-l">Dagurinn</span></button>
+      <button class="tab" onclick="setTab('nemendur')"><span class="tab-i">👥</span><span class="tab-l">Nemendur</span></button>
+      <button class="tab active" onclick="setTab('tonleikar')"><span class="tab-i">🎵</span><span class="tab-l">Tónleikar</span></button>
+      <button class="tab" onclick="setTab('matur')"><span class="tab-i">🍽️</span><span class="tab-l">Matur</span></button>
+      <button class="tab" onclick="setTab('skilabod')"><span class="tab-i">✉️</span><span class="tab-l" id="tab-skil-lbl3">Skilaboð</span></button>
+    </div>
+  </div>
+
+  <!-- ── SKILABOÐ SCREEN ── -->
+  <div class="screen" id="skilabod">
+    <div class="topbar">
+      <div class="teacher-info">
+        <div class="teacher-name">Skilaboð</div>
+        <div style="font-size:11px;color:var(--text-dim)">Frá forráðamönnum</div>
+      </div>
+    </div>
+    <div class="skil-scroll" id="skil-list"></div>
+    <div class="tabbar">
+      <button class="tab" onclick="setTab('home')"><span class="tab-i">📅</span><span class="tab-l">Dagurinn</span></button>
+      <button class="tab" onclick="setTab('nemendur')"><span class="tab-i">👥</span><span class="tab-l">Nemendur</span></button>
+      <button class="tab" onclick="setTab('tonleikar')"><span class="tab-i">🎵</span><span class="tab-l">Tónleikar</span></button>
+      <button class="tab" onclick="setTab('matur')"><span class="tab-i">🍽️</span><span class="tab-l">Matur</span></button>
+      <button class="tab active" onclick="setTab('skilabod')"><span class="tab-i">✉️</span><span class="tab-l">Skilaboð</span></button>
+    </div>
+  </div>
+
+  <!-- ── MATUR SCREEN ── -->
+  <div class="screen" id="matur">
+    <div class="topbar">
+      <div class="teacher-info">
+        <div class="teacher-name">Hádegismatur</div>
+        <div style="font-size:11px;color:var(--text-dim)">Vitinn Mathús — pöntun fyrir kl. 10:00</div>
+      </div>
+    </div>
+    <div class="mat-scroll" id="mat-list"></div>
+    <div class="tabbar">
+      <button class="tab" onclick="setTab('home')"><span class="tab-i">📅</span><span class="tab-l">Dagurinn</span></button>
+      <button class="tab" onclick="setTab('nemendur')"><span class="tab-i">👥</span><span class="tab-l">Nemendur</span></button>
+      <button class="tab" onclick="setTab('tonleikar')"><span class="tab-i">🎵</span><span class="tab-l">Tónleikar</span></button>
+      <button class="tab active" onclick="setTab('matur')"><span class="tab-i">🍽️</span><span class="tab-l">Matur</span></button>
+      <button class="tab" onclick="setTab('skilabod')"><span class="tab-i">✉️</span><span class="tab-l">Skilaboð</span></button>
+    </div>
+  </div>
+
+  <!-- ── ATTENDANCE SHEET ── -->
+  <div class="screen" id="att-sheet" onclick="closeAtt(event)">
+    <div class="att-inner" onclick="event.stopPropagation()">
+      <div class="handle"></div>
+      <p class="att-name" id="att-name">Anna Björk</p>
+      <p class="att-meta" id="att-meta">Píanó · G-nám · 13:00 · Stofa 3</p>
+      <div class="att-grid">
+        <button class="att-btn present" onclick="selectAtt('present')">✓ Mætti</button>
+        <button class="att-btn late" onclick="selectAtt('late')">⏱ Seinn/sein</button>
+        <button class="att-btn absent" onclick="selectAtt('absent')">✗ Fjarverandi</button>
+        <button class="att-btn forfoll" onclick="selectAtt('forfoll')">⚠ Forföll skráð</button>
+      </div>
+      <div class="hw-area" id="hw-area" style="display:none">
+        <p class="hw-label">HEIMAVERKEFNI (VALKVÆTT)</p>
+        <select class="rep-select" id="rep-select" onchange="onRepSelect(this.value)">
+          <option value="">— Velja verk af lista —</option>
+        </select>
+        <p class="hw-label" style="margin-top:8px">ATHUGASEMD FYRIR NEMANDA (VALKVÆTT)</p>
+        <textarea class="hw-input" id="hw-input" placeholder="t.d. Passa fingrasetningu í 4. og 5. takti — metrónóm 60..." rows="2"></textarea>
+      </div>
+      <button class="save-btn wait" id="save-btn" onclick="saveAtt()">Vista mætingu</button>
+    </div>
+  </div>
+
+  <!-- ── STICKER SHEET ── -->
+  <div class="screen" id="sticker-sheet" onclick="closeStickerSheet(event)">
+    <div class="sp-inner" onclick="event.stopPropagation()">
+      <div class="handle"></div>
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:4px">
+        <p class="sp-student" id="sp-student" style="margin:0">Anna Björk</p>
+        <button onclick="closeStickerX()" style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:50%;width:28px;height:28px;color:rgba(255,255,255,0.45);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:sans-serif">×</button>
+      </div>
+      <p id="sp-desc-extra" style="font-size:12px;color:rgba(255,255,255,0.42);line-height:1.55;margin:0 0 8px"></p>
+      <p class="sp-desc">Þú mátt velja einn límmiða — hvað sem þú vilt! Vandaðu valið þitt.</p>
+      <div class="rare-banner" id="sp-rare-banner" style="display:none">
+        <span style="font-size:13px">✦</span>
+        <span class="rub" id="sp-rare-txt">5+ dagar — rare límmiðinn er opinn!</span>
+      </div>
+      <div class="serie-row">
+        <div class="spill">✦ Geimfarar</div>
+        <div class="spill off">🌊 Djúphaf 🔒</div>
+        <div class="spill off">♩ Janus 🔒</div>
+      </div>
+      <div class="sp-scroll">
+        <div class="sp-grid" id="sp-grid"></div>
+      </div>
+      <button class="sp-confirm wait" id="sp-confirm" onclick="confirmSticker()">Veldu einn límmiða til að halda áfram</button>
+      <p class="sp-note">Valið er endanlegt — nemandi getur ekki skipt seinna</p>
+      <div class="or-row"><div class="or-line"></div><span class="or-txt">eða</span><div class="or-line"></div></div>
+      <button class="send-parent-btn" onclick="sendToParent()">📱 Senda tilkynningu á forráðamann í staðinn</button>
+    </div>
+  </div>
+
+  <!-- ── STAMP ── -->
+  <div class="screen" id="stamp-overlay">
+    <div class="stamp-glow"></div>
+    <div id="stamp-particles"></div>
+    <div class="stamp-inner-full">
+      <div class="stamp-wrap">
+        <div class="sr1"></div><div class="sr2"></div>
+        <span class="stamp-e" id="st-emoji"></span>
+      </div>
+      <h1 class="sname" id="st-name"></h1>
+      <p class="stag" id="st-tag"></p>
+      <p class="squote" id="st-quote"></p>
+      <div class="saved-pill"><div class="saved-dot"></div>Límmiðinn er vistaður í safninu</div>
+      <button class="stamp-close" onclick="closeStamp()">Klárað — aftur í daginn →</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── STARS ─────────────────────────────────────────────────────────
+const cv = document.getElementById('stars');
+const ctx = cv.getContext('2d');
+const ph = document.getElementById('phone');
+cv.width = ph.offsetWidth; cv.height = ph.offsetHeight;
+const stars = Array.from({length:160}, () => ({
+  x:Math.random(), y:Math.random(), s:.3+Math.random()*1.4,
+  bO:.03+Math.random()*.09, a:.02+Math.random()*.06,
+  sp:.04+Math.random()*.12, ph:Math.random()*Math.PI*2,
+  g:Math.random()<.05, gS:.8+Math.random()*1.5, gP:Math.random()*Math.PI*2
+}));
+let t=0;
+function drawStars(){
+  ctx.clearRect(0,0,cv.width,cv.height); t+=.016;
+  stars.forEach(s=>{
+    let o=s.bO+s.a*Math.sin(t*s.sp+s.ph);
+    if(s.g){const gv=Math.sin(t*s.gS+s.gP);if(gv>.88){const ga=(gv-.88)/.12;o=Math.max(o,ga*.55);}}
+    ctx.globalAlpha=Math.max(0,o);ctx.fillStyle='#fff';
+    ctx.beginPath();ctx.arc(s.x*cv.width,s.y*cv.height,s.s/2,0,Math.PI*2);ctx.fill();
+  });
+  ctx.globalAlpha=1;requestAnimationFrame(drawStars);
+}
+drawStars();
+
+// ── STATE ────────────────────────────────────────────────────────
+const STUDENTS = [
+  {id:1, name:'Anna Björk', subj:'Píanó', level:'G-nám', time:'13:00', room:'Stofa 3', status:null, pracDays:5, sticker:null},
+  {id:2, name:'Gunnar Þór', subj:'Gítar', level:'M-nám', time:'13:45', room:'Stofa 1', status:null, pracDays:3, sticker:null},
+  {id:3, name:'Sigríður Hanna', subj:'Píanó', level:'G-nám', time:'14:30', room:'Stofa 3', status:'present', pracDays:6, sticker:'sent'},
+  {id:4, name:'Björn Leó', subj:'Trommur', level:'G-nám', time:'15:15', room:'Stofa 5', status:null, pracDays:2, sticker:null},
+];
+
+const STICKERS = [
+  {id:'s1',e:'🚀',name:'Geimskip',owned:true,rare:false,desc:'Flyður í stjörnurnar — hraðar en nokkuð annað'},
+  {id:'s2',e:'🌙',name:'Tunglið',owned:true,rare:false,desc:'Alltaf hér, alltaf kyr'},
+  {id:'s3',e:'⭐',name:'Stjarna',owned:false,rare:false,desc:'Glóir í myrkrinu þegar öll önnur ljós hafa slokknað'},
+  {id:'s4',e:'🪐',name:'Reikistjarna',owned:false,rare:false,desc:'Hringur í kringum sig — hún þarf ekki neinn annan'},
+  {id:'s5',e:'🌌',name:'Vetrarbrautin',owned:false,rare:false,desc:'Óendanleg og dularfull'},
+  {id:'sr',e:'👾',name:'Óþekkt lífvera',owned:false,rare:true,desc:'Enginn veit hvaðan hún er. Hún veit það líka ekki. Hún er ánægð.'},
+];
+
+let activeStudentId = null;
+let activeAtt = null;
+let activeStickerStudentId = null;
+let selectedStickerId = null;
+let veikurSent = false;
+let snackTimer = null;
+let openSkilabodId = null;
+
+const REPERTOIRE = [
+  "Bach: Prelude C-dúr (BWV 846)",
+  "Bach: Prelude D-moll (BWV 935)",
+  "Bach: Minuet G-dúr (Anna Magdalena)",
+  "Beethoven: Fúr Elíse",
+  "Clementi: Sonatina Op. 36 nr. 1",
+  "Bartók: Microcosmos nr. 33",
+  "Mozart: Minuet G-dúr (KV 1)",
+  "Hanon: Nr. 1 — Upphlaupsæfing",
+  "C-dúr skali — tvær áttundir",
+  "G-dúr skali — ein áttund",
+];
+
+let SKILABOD = [
+  {id:1, fra:"María Jónsdóttir", barn:"Anna Björk", texti:"Gæti Anna farið aðeins snemma í dag, um 13:25? Við erum á leiðinni úr tannlækninum.", kl:"08:32", lesid:false},
+  {id:2, fra:"Þór Gunnarsson", barn:"Gunnar Þór", texti:"Vildi spyrja hvort rétt er að æfa D-dúr eða D-moll þessa vikuna. Þekkjum bæði.", kl:"Í gær · 18:04", lesid:true},
+];
+
+const TONLEIKAR_DATA = [
+  {
+    id:1, titill:"Vorleikur — Píanónemar", dags:"Þriðjudagur, 27. maí", timi:"19:00",
+    stadur:"Aðalsalur", lengdHamark:40, aflyst:false,
+    skraningOpid:true, skraningOpnarDags:"8. maí",
+    skraningar:[
+      {nafn:"Anna Björk", verk:"Bach: Minuet G-dúr", hofundur:"Bach", lengd:3},
+      {nafn:"Sigríður Hanna", verk:"Beethoven: Fúr Elíse", hofundur:"Beethoven", lengd:4},
+      {nafn:"Björn Leó", verk:"Clementi: Sonatina Op.36", hofundur:"Clementi", lengd:4},
+    ]
+  },
+  {
+    id:2, titill:"Lokatónleikar skólans", dags:"Föstudagur, 6. júní", timi:"16:00",
+    stadur:"Menningarhúsið", lengdHamark:40, aflyst:false,
+    skraningOpid:true, skraningOpnarDags:"16. maí",
+    skraningar:[
+      {nafn:"Anna Björk", verk:"Clementi: Sonatina Op.36 nr.1", hofundur:"Clementi", lengd:5},
+    ]
+  },
+  {
+    id:3, titill:"Hljómsveitartónleikar", dags:"Miðvikudagur, 12. mars", timi:"18:00",
+    stadur:"Aðalsalur", lengdHamark:60, aflyst:true,
+    skraningOpid:false, skraningOpnarDags:"19. febrúar",
+    skraningar:[
+      {nafn:"Gunnar Þór", verk:"Beethoven: Ode to Joy", hofundur:"Beethoven", lengd:5},
+    ]
+  },
+  {
+    id:4, titill:"Vorleikur — Strengjanemar", dags:"Miðvikudagur, 28. maí", timi:"17:00",
+    stadur:"Aðalsalur", lengdHamark:40, aflyst:false,
+    skraningOpid:false, skraningOpnarDags:"7. maí",
+    skraningar:[]
+  },
+  {
+    id:5, titill:"Jólaleikur", dags:"Fimmtudagur, 11. desember", timi:"17:00",
+    stadur:"Menningarhúsið", lengdHamark:60, aflyst:false,
+    skraningOpid:false, skraningOpnarDags:"20. nóvember",
+    skraningar:[]
+  },
+  {
+    id:6, titill:"Haustleikur", dags:"Föstudagur, 17. október", timi:"18:00",
+    stadur:"Aðalsalur", lengdHamark:50, aflyst:false,
+    skraningOpid:false, skraningOpnarDags:"26. september",
+    skraningar:[]
+  },
+];
+
+// ── DATE ──────────────────────────────────────────────────────────
+const days = ['Sunnudagur','Mánudagur','Þriðjudagur','Miðvikudagur','Fimmtudagur','Föstudagur','Laugardagur'];
+const months = ['janúar','febrúar','mars','apríl','maí','júní','júlí','ágúst','september','október','nóvember','desember'];
+const now = new Date();
+const dateStr = days[now.getDay()]+', '+now.getDate()+'. '+months[now.getMonth()];
+document.getElementById('today-date').textContent = dateStr;
+
+// ── TAB SWITCHING ────────────────────────────────────────────────
+function setTab(tab){
+  ['home','nemendur','tonleikar','skilabod','matur'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.classList.remove('active');
+  });
+  const target = document.getElementById(tab);
+  if(target) target.classList.add('active');
+  if(tab === 'nemendur') renderNemendur();
+  if(tab === 'tonleikar') renderTonleikar();
+  if(tab === 'skilabod') renderSkilabod();
+  if(tab === 'matur') renderMatur();
+  updateUnreadBadge();
+}
+
+// ── MATUR ────────────────────────────────────────────────────────
+
+// Reikna dagsetningar yfirstandandi viku
+function getWeekDates() {
+  const now = new Date();
+  const day = now.getDay(); // 0=sun, 1=mon...
+  const hour = now.getHours();
+
+  // Föstudagur eftir kl. 10 eða um helgi → sækja næstu viku
+  const naestVika = (day === 5 && hour >= 10) || day === 6 || day === 0;
+
+  const mon = new Date(now);
+  const diffToMon = day === 0 ? -6 : 1 - day; // mánudagur þessarar viku
+  mon.setDate(now.getDate() + diffToMon + (naestVika ? 7 : 0));
+  mon.setHours(0,0,0,0);
+
+  return Array.from({length:5}, (_,i) => {
+    const d = new Date(mon);
+    d.setDate(mon.getDate() + i);
+    return d.toISOString().split('T')[0];
+  });
+}
+
+const VIKUDAGAR = ['Mánudagur','Þriðjudagur','Miðvikudagur','Fimmtudagur','Föstudagur'];
+const VIKUDAGS = getWeekDates();
+
+const MATSEDILL = [
+  { dagur:'Mánudagur',   dags:VIKUDAGS[0], A:'Ítalskar bollur með spaghetti, marinarasósu, grænmeti, parmesan og vínberjasalati', B:'Bakaður fiskur með kartöflum, hvítvínssósu, karrý blómkáli og fersku salati', C:'Kjúklingabringa með eðlusósu, hrísgrjónum, nachos, sýrðum rjóma og fersku salati', D:'Kjúklingasalat með bacon, eggi og hunangs sinnepssósu', E:'Asískt kjúklingasalat' },
+  { dagur:'Þriðjudagur', dags:VIKUDAGS[1], A:'Kálfabrisket í BBQ með hvítlauks kartöflumús, heitri BBQsósu, grænmeti og fersku salati', B:'Lax með hunangs/soja dressingu, kókoshrísgrjónum, grænmeti, salati og engifer&lime mæjó', C:'Kjúklingalundir í sataysósu með hrísgrjónum, hnetum, grænmeti og fersku salati', D:'Kjúklingasalat með bacon, eggi og hunangs sinnepssósu', E:'Asískt kjúklingasalat' },
+  { dagur:'Miðvikudagur',dags:VIKUDAGS[2], fri:true }, // Dæmi um frí — enginn matur
+  { dagur:'Fimmtudagur', dags:VIKUDAGS[3], A:'Purusteik með karamellu kartöflum, grænmeti, sósu, rauðkáli og ávaxtasalati', B:'Pönnusteikt keila með kartöflum, grænmeti, rjómapiparsósu og fersku salati', C:'Tikka masala kjúklingur með karrýgrjónum, mangó chutney, salati og naanbrauði', D:'Kjúklingasalat með bacon, eggi og hunangs sinnepssósu', E:'Asískt kjúklingasalat' },
+  { dagur:'Föstudagur',  dags:VIKUDAGS[4], A:'Beikonborgari með káli, sósu, frönskum kartöflum og kokteilsósu', B:'Bakaður fiskur með bearnaisesósu, sveppum, lauk, kartöflum og fersku salati', C:'Kjúklingabringa með smælki, piparsósu, grænmeti og fersku salati', D:'Kjúklingasalat með bacon, eggi og hunangs sinnepssósu', E:'Asískt kjúklingasalat' },
+];
+
+// Pantanir þessarar viku — í alvöru: sóttar úr MatPantanir í SharePoint
+const PANTANIR = Object.fromEntries(VIKUDAGS.map(d => [d, null]));
+
+function isCutoff(dags) {
+  const now = new Date();
+  const dagur = new Date(dags);
+  dagur.setHours(10, 0, 0, 0);
+  return now >= dagur;
+}
+
+function velaMat(dags, val) {
+  PANTANIR[dags] = val === '' ? null : val;
+}
+
+function vistaMatPontun(dags) {
+  if(isCutoff(dags)) { snack('Pöntunarfrestur liðinn — hafðu samband við Fanneyju'); return; }
+  const val = PANTANIR[dags];
+  // Í alvöru: POST/PATCH á MatPantanir í SharePoint
+  snack(val ? `✓ Pöntun vistuð — ${val}` : '✓ Pöntun afpöntuð');
+  renderMatur();
+}
+
+function formatDags(dags) {
+  const d = new Date(dags);
+  return d.toLocaleDateString('is-IS', { day:'numeric', month:'long' });
+}
+
+function renderMatur() {
+  const sc = document.getElementById('mat-list');
+  if(!sc) return;
+
+  const dagLitir = {
+    'Mánudagur':   'rgba(56,189,248,0.08)',
+    'Þriðjudagur': 'rgba(134,239,172,0.08)',
+    'Miðvikudagur':'rgba(251,191,36,0.08)',
+    'Fimmtudagur': 'rgba(196,181,253,0.08)',
+    'Föstudagur':  'rgba(249,168,212,0.08)',
+  };
+  const dagBrún = {
+    'Mánudagur':   'rgba(56,189,248,0.25)',
+    'Þriðjudagur': 'rgba(134,239,172,0.25)',
+    'Miðvikudagur':'rgba(251,191,36,0.25)',
+    'Fimmtudagur': 'rgba(196,181,253,0.25)',
+    'Föstudagur':  'rgba(249,168,212,0.25)',
+  };
+  const dagTexti = {
+    'Mánudagur':   'rgba(56,189,248,0.9)',
+    'Þriðjudagur': 'rgba(134,239,172,0.9)',
+    'Miðvikudagur':'rgba(251,191,36,0.9)',
+    'Fimmtudagur': 'rgba(196,181,253,0.9)',
+    'Föstudagur':  'rgba(249,168,212,0.9)',
+  };
+
+  const synilegar = MATSEDILL.filter(dag => !isCutoff(dag.dags));
+  if(synilegar.length === 0) {
+    sc.innerHTML = `<div style="text-align:center;padding:40px 24px;color:rgba(255,255,255,0.3)">
+      <div style="font-size:32px;margin-bottom:12px">🍽️</div>
+      <div style="font-family:'Baloo 2',sans-serif;font-size:15px;font-weight:700;margin-bottom:6px">Engar pantanir í boði</div>
+      <div style="font-size:12px;line-height:1.6">Matseðill næstu viku birtist á föstudögum þegar Fanney hleður honum upp.</div>
+    </div>`;
+    return;
+  }
+  sc.innerHTML = synilegar.map(dag => {
+    const pantad = PANTANIR[dag.dags];
+    const lokad = isCutoff(dag.dags);
+    const fri = dag.fri === true;
+    const valmoguleikar = ['A','B','C','D','E'].filter(k => dag[k]);
+    const litur = dagLitir[dag.dagur];
+    const brun = dagBrún[dag.dagur];
+    const texti = dagTexti[dag.dagur];
+    const dagsFmt = formatDags(dag.dags);
+
+    // Frídagur — enginn matur
+    if(fri) {
+      return `<div style="background:rgba(255,255,255,0.02);border:1px dashed rgba(255,255,255,0.06);border-radius:18px;padding:14px 16px;margin:0 14px 12px;opacity:0.5">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div>
+            <div style="font-family:'Baloo 2',sans-serif;font-size:15px;font-weight:700;color:rgba(255,255,255,0.4)">${dag.dagur}</div>
+            <div style="font-size:11px;color:rgba(255,255,255,0.2);margin-top:2px">${dagsFmt}</div>
+          </div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.3);font-style:italic">🚫 Enginn matur</div>
+        </div>
+      </div>`;
+    }
+
+    const options = valmoguleikar.map(k =>
+      `<option value="${k}" ${pantad===k?'selected':''}>${k} — ${dag[k]}</option>`
+    ).join('');
+
+    return `<div style="background:${litur};border:1px solid ${lokad?'rgba(255,255,255,0.04)':brun};border-radius:18px;padding:14px 16px;margin:0 14px 12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+        <div>
+          <div style="font-family:'Baloo 2',sans-serif;font-size:15px;font-weight:700;color:${lokad?'rgba(255,255,255,0.35)':'white'}">${dag.dagur}</div>
+          <div style="font-size:11px;color:${lokad?'rgba(255,255,255,0.2)':texti};margin-top:1px">${dagsFmt}</div>
+        </div>
+        ${lokad
+          ? '<div style="font-size:10px;color:rgba(255,100,100,0.6);font-weight:600">🔒 Lokað kl. 10</div>'
+          : pantad
+            ? `<div style="font-size:10px;font-weight:700;color:${texti};background:rgba(255,255,255,0.08);padding:3px 10px;border-radius:8px">✓ Pantað: ${pantad}</div>`
+            : '<div style="font-size:10px;color:rgba(255,255,255,0.25)">Ekki pantað</div>'
+        }
+      </div>
+      <select ${lokad?'disabled':''} onchange="velaMat('${dag.dags}', this.value)"
+        style="width:100%;background:rgba(0,0,0,0.3);border:1px solid ${brun};border-radius:12px;color:${lokad?'rgba(255,255,255,0.3)':'rgba(255,255,255,0.85)'};font-size:13px;font-family:'Nunito',sans-serif;padding:10px 12px;margin-top:10px;margin-bottom:10px;outline:none;appearance:none;-webkit-appearance:none;background-image:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22rgba(255,255,255,0.4)%22 stroke-width=%222%22><polyline points=%226 9 12 15 18 9%22/></svg>');background-repeat:no-repeat;background-position:right 12px center;background-size:16px;padding-right:36px">
+        <option value="">— Veldu rétt —</option>
+        ${options}
+      </select>
+      ${!lokad ? `<button onclick="vistaMatPontun('${dag.dags}')"
+        style="width:100%;padding:11px;border-radius:14px;border:none;background:${brun};color:${texti};font-family:'Baloo 2',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:opacity .15s"
+        onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+        Vista skráningu
+      </button>` : ''}
+    </div>`;
+  }).join('');
+}
+
+// ── SNACK ────────────────────────────────────────────────────────
+function snack(msg){
+  if(snackTimer) clearTimeout(snackTimer);
+  document.querySelectorAll('.snack').forEach(s=>s.remove());
+  const el = document.createElement('div');
+  el.className = 'snack'; el.textContent = msg;
+  document.getElementById('phone').appendChild(el);
+  snackTimer = setTimeout(()=>el.remove(), 3000);
+}
+
+// ── VEIKINDI ─────────────────────────────────────────────────────
+function openVeikindi(){
+  if(veikurSent){snack('Veikindatilkynning var þegar send ✓');return;}
+  const ov = document.createElement('div');
+  ov.className = 'modal-bg'; ov.id = 'veikur-modal';
+  ov.innerHTML = `<div class="modal-box" style="border-color:rgba(239,68,68,0.22)">
+    <div style="font-size:34px;text-align:center;margin-bottom:10px">🤒</div>
+    <div style="font-family:'Baloo 2',sans-serif;font-size:18px;font-weight:800;color:#fff;text-align:center;margin-bottom:6px">Veikindatilkynning</div>
+    <p style="font-size:12px;color:rgba(255,255,255,0.45);text-align:center;line-height:1.6;margin-bottom:18px">Tilkynning verður send á skrifstofu og forráðamenn allra ${STUDENTS.filter(s=>!s.status).length} nemenda sem eru óskráðir í dag.</p>
+    <div style="display:flex;gap:8px">
+      <button onclick="document.getElementById('veikur-modal').remove()" style="flex:1;height:46px;border-radius:14px;border:1px solid rgba(255,255,255,0.12);background:transparent;color:rgba(255,255,255,0.4);font-size:14px;cursor:pointer">Hætta við</button>
+      <button onclick="sendaVeikindi()" style="flex:2;height:46px;border-radius:14px;border:none;background:linear-gradient(135deg,#dc2626,#b91c1c);color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:'Baloo 2',sans-serif">Senda tilkynningu</button>
+    </div>
+  </div>`;
+  document.getElementById('phone').appendChild(ov);
+}
+function sendaVeikindi(){
+  veikurSent = true;
+  document.getElementById('veikur-modal')?.remove();
+  const btn = document.querySelector('.sick-btn');
+  if(btn){ btn.style.background='rgba(34,197,94,0.1)'; btn.style.borderColor='rgba(34,197,94,0.3)'; btn.querySelector('.sick-txt').textContent='Tilkynning send ✓'; btn.querySelector('.sick-txt').style.color='rgba(134,239,172,0.8)'; btn.querySelector('span:first-child').textContent='✓'; }
+  snack('Tilkynning send — skrifstofa og forráðamenn fengust við ✓');
+}
+
+// ── TÓNLEIKAR SCREEN ──────────────────────────────────────────────
+function renderTonleikar(){
+  const list = document.getElementById('ton-list');
+  const aflystir = TONLEIKAR_DATA.filter(t=>t.aflyst && t.skraningar.length > 0);
+  let html = '';
+
+  // In-app notification banner ef einhver tónleikar aflýstir
+  if(aflystir.length > 0){
+    html += `<div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-radius:16px;padding:12px 14px;margin-bottom:12px;display:flex;align-items:flex-start;gap:10px">
+      <span style="font-size:18px;flex-shrink:0">⚠️</span>
+      <div>
+        <div style="font-family:'Baloo 2',sans-serif;font-size:13px;font-weight:800;color:rgba(252,165,165,0.9);margin-bottom:3px">Tónleikum aflýst</div>
+        ${aflystir.map(t=>`<div style="font-size:11px;color:rgba(255,255,255,0.45);line-height:1.5">${t.titill} · ${t.dags}</div>`).join('')}
+        <div style="font-size:10px;color:rgba(252,165,165,0.45);margin-top:4px">Forráðamenn nemenda sjá þetta í sínu appi</div>
+      </div>
+    </div>`;
+  }
+
+  // Opnir tónleikar
+  const opnir = TONLEIKAR_DATA.filter(t=>!t.aflyst && t.skraningOpid);
+  if(opnir.length > 0){
+    html += `<p class="section-lbl">OPIÐ FYRIR SKRÁNINGU</p>`;
+    opnir.forEach(t => { html += tonCard(t); });
+  }
+
+  // Lokaðir (ekki enn opnir)
+  const lokad = TONLEIKAR_DATA.filter(t=>!t.aflyst && !t.skraningOpid);
+  if(lokad.length > 0){
+    html += `<p class="section-lbl" style="margin-top:12px">SKRÁNING EKKI OPIN ENNÞÁ</p>`;
+    lokad.forEach(t => { html += tonCard(t); });
+  }
+
+  // Aflýstir
+  if(aflystir.length > 0){
+    html += `<p class="section-lbl" style="margin-top:12px">AFLÝST</p>`;
+    aflystir.forEach(t => { html += tonCard(t); });
+  }
+
+  list.innerHTML = html;
+}
+
+function tonCard(t){
+  const notad = t.skraningar.reduce((s,r)=>s+r.lengd,0);
+  const pct = Math.min(100, Math.round(notad/t.lengdHamark*100));
+  const full = !t.aflyst && t.skraningOpid && notad >= t.lengdHamark;
+
+  let cardClass = 'ton-card';
+  if(t.aflyst) cardClass += ' lokid';
+  else if(t.skraningOpid) cardClass += ' opid';
+
+  return `<div class="${cardClass}">
+    <div class="ton-header">
+      <div class="ton-icon">${t.aflyst ? '🚫' : '🎵'}</div>
+      <div style="flex:1">
+        <div class="ton-titill">${t.titill}${t.aflyst ? ' <span style="font-size:10px;color:rgba(252,165,165,0.7);background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.2);border-radius:6px;padding:1px 6px;margin-left:4px">AFLÝST</span>' : ''}</div>
+        <div class="ton-meta">${t.dags} · kl. ${t.timi} · ${t.stadur}</div>
+      </div>
+    </div>
+    ${t.skraningOpid && !t.aflyst ? `
+    <div class="ton-progress">
+      <div class="ton-prog-row">
+        <span class="ton-prog-lbl">Lengd skráð</span>
+        <span class="ton-prog-num">${notad}/${t.lengdHamark} mín</span>
+      </div>
+      <div class="ton-bar"><div class="ton-bar-fill${full?' full':''}" style="width:${pct}%"></div></div>
+    </div>` : ''}
+    ${t.skraningar.length > 0 ? `
+    <div class="ton-nemendur">
+      <p class="section-lbl" style="margin-bottom:6px">SKRÁÐIR NEMENDUR</p>
+      ${t.skraningar.map(s=>`
+        <div class="ton-nem-item">
+          <span class="ton-nem-name">${s.nafn}</span>
+          <span class="ton-nem-verk">${s.verk}</span>
+          <span style="font-size:10px;color:var(--text-dimmer);flex-shrink:0;margin-left:6px">${s.lengd} mín</span>
+        </div>`).join('')}
+    </div>` : ''}
+    ${t.aflyst ? '' : !t.skraningOpid
+      ? `<div style="margin-top:10px;display:flex;align-items:center;gap:7px;background:rgba(56,189,248,0.05);border:1px solid rgba(56,189,248,0.1);border-radius:10px;padding:8px 12px">
+          <span style="font-size:13px">🔒</span>
+          <div>
+            <div style="font-size:11px;font-weight:700;color:rgba(56,189,248,0.5)">Skráning opnar ${t.skraningOpnarDags}</div>
+            <div style="font-size:10px;color:rgba(255,255,255,0.25);margin-top:1px">Fyrstur kemur fyrstur fær</div>
+          </div>
+        </div>`
+      : full
+        ? `<div class="ton-full-badge">✓ Tónleikar fullir — ${notad} mín</div>`
+        : `<button class="ton-skra-btn" onclick="openTonleikModal(${t.id})">+ Skrá nemanda á tónleika</button>`
+    }
+  </div>`;
+}
+
+function openTonleikModal(tonId){
+  const t = TONLEIKAR_DATA.find(x=>x.id===tonId);
+  if(!t) return;
+  const notad = t.skraningar.reduce((s,r)=>s+r.lengd,0);
+  const eftir = t.lengdHamark - notad;
+  const ov = document.createElement('div');
+  ov.className = 'ton-modal-bg'; ov.id = 'ton-modal';
+  ov.onclick = (e)=>{ if(e.target===ov) ov.remove(); };
+  ov.innerHTML = `<div class="ton-modal" onclick="event.stopPropagation()">
+    <div class="ton-modal-handle"></div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">
+      <div>
+        <div style="font-family:'Baloo 2',sans-serif;font-size:16px;font-weight:800;color:#fff">${t.titill}</div>
+        <div style="font-size:11px;color:var(--text-dim);margin-top:2px">${t.dags} · ${eftir} mín eftir</div>
+      </div>
+      <button onclick="document.getElementById('ton-modal').remove()" style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);border-radius:10px;width:30px;height:30px;color:rgba(255,255,255,0.4);font-size:14px;cursor:pointer;flex-shrink:0">✕</button>
+    </div>
+    <p class="ton-field-lbl">NEMANDI</p>
+    <select class="ton-nem-select" id="ton-sel-nem">
+      <option value="">— Velja nemanda —</option>
+      ${STUDENTS.map(s=>`<option value="${s.name}">${s.name} — ${s.subj}</option>`).join('')}
+    </select>
+    <p class="ton-field-lbl">VERK</p>
+    <select class="ton-nem-select" id="ton-sel-verk" onchange="onTonVerkSelect(this.value)">
+      <option value="">— Velja af repertoire-lista —</option>
+      ${REPERTOIRE.map(r=>`<option value="${r}">${r}</option>`).join('')}
+      <option value="__custom">✎ Skrifa verk beint...</option>
+    </select>
+    <input type="text" class="ton-input" id="ton-input-verk" placeholder="Titill verks..." style="display:none">
+    <p class="ton-field-lbl">HÖFUNDUR</p>
+    <input type="text" class="ton-input" id="ton-input-hofundur" placeholder="Nafn höfundar...">
+    <p class="ton-field-lbl">LENGD FLUTNINGS (mín)</p>
+    <input type="number" class="ton-input" id="ton-input-lengd" placeholder="t.d. 4" min="1" max="${eftir}" style="margin-bottom:16px">
+    <div style="display:flex;gap:8px">
+      <button onclick="document.getElementById('ton-modal').remove()" style="flex:1;height:48px;border-radius:14px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:rgba(255,255,255,0.38);font-size:14px;cursor:pointer">Hætta við</button>
+      <button onclick="vistatonleikar(${tonId})" style="flex:2;height:48px;border-radius:14px;border:none;background:linear-gradient(135deg,#0ea5e9,#0284c7);color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:'Baloo 2',sans-serif">Vista skráningu ✓</button>
+    </div>
+  </div>`;
+  document.getElementById('phone').appendChild(ov);
+}
+
+function onTonVerkSelect(val){
+  const input = document.getElementById('ton-input-verk');
+  const hofundur = document.getElementById('ton-input-hofundur');
+  if(val === '__custom'){
+    input.style.display = 'block';
+    input.value = '';
+    hofundur.value = '';
+  } else if(val) {
+    input.style.display = 'none';
+    // Auto-fill höfundur úr verknafni (fyrsta orðið)
+    hofundur.value = val.split(':')[0].trim();
+  } else {
+    input.style.display = 'none';
+  }
+}
+
+function vistatonleikar(tonId){
+  const t = TONLEIKAR_DATA.find(x=>x.id===tonId);
+  const nafn = document.getElementById('ton-sel-nem')?.value;
+  const verkSel = document.getElementById('ton-sel-verk')?.value;
+  const verkInput = document.getElementById('ton-input-verk')?.value;
+  const verk = verkSel === '__custom' ? verkInput : verkSel;
+  const hofundur = document.getElementById('ton-input-hofundur')?.value;
+  const lengd = parseInt(document.getElementById('ton-input-lengd')?.value);
+  if(!nafn || !verk || !lengd){ snack('Vantar upplýsingar — fylltu inn alla reiti'); return; }
+  const notad = t.skraningar.reduce((s,r)=>s+r.lengd,0);
+  if(notad + lengd > t.lengdHamark){ snack(`Of langt — aðeins ${t.lengdHamark - notad} mín eftir`); return; }
+  t.skraningar.push({nafn, verk, hofundur: hofundur||'', lengd});
+  document.getElementById('ton-modal')?.remove();
+  renderTonleikar();
+  snack(`${nafn} skráð/skráður á ${t.titill} ✓`);
+}
+function renderNemendur(){
+  const list = document.getElementById('nem-list');
+  let html = `<p class="section-lbl" style="padding:0 2px 0">ALLIR NEMENDUR — PÍANÓ</p>`;
+  html += STUDENTS.map(s => `
+    <div class="nem-item">
+      <div class="nem-avatar">${s.name[0]}</div>
+      <div style="flex:1;min-width:0">
+        <div class="nem-name">${s.name}</div>
+        <div class="nem-meta">${s.level} · ${s.room}</div>
+      </div>
+      <div class="nem-time">
+        <div class="nem-t">${s.time}</div>
+        <div class="nem-s">${s.subj}</div>
+      </div>
+    </div>`).join('');
+  html += `<p class="section-lbl" style="padding:8px 2px 0">REPERTOIRE-LISTI (${REPERTOIRE.length} stk)</p>`;
+  html += `<div style="background:var(--card);border:1px solid var(--card-b);border-radius:18px;padding:10px 16px;margin-bottom:16px">`;
+  REPERTOIRE.slice(0,7).forEach((r,i) => { html += `<div class="rep-item" style="${i===6?'border:none':''}">${r}</div>`; });
+  html += `<div class="rep-more">+${REPERTOIRE.length-7} fleiri á lista</div></div>`;
+  list.innerHTML = html;
+}
+
+// ── SKILABOÐ SCREEN ───────────────────────────────────────────────
+function updateUnreadBadge(){
+  const n = SKILABOD.filter(s=>!s.lesid).length;
+  ['tab-skil-lbl','tab-skil-lbl2'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.textContent = n > 0 ? `Skilaboð (${n})` : 'Skilaboð';
+  });
+}
+function renderSkilabod(){
+  const list = document.getElementById('skil-list');
+  const n = SKILABOD.filter(s=>!s.lesid).length;
+  let html = `<p class="section-lbl" style="padding:0 2px 6px">SKILABOÐ${n>0?' — '+n+' ÓLEST':''}</p>`;
+  html += SKILABOD.map(s => `
+    <button class="skil-btn${s.lesid?'':' unread'}" onclick="opnaSkilabod(${s.id})">
+      <div class="skil-header">
+        <div><div class="skil-fra">${s.fra}</div><div class="skil-barn">Varðar: ${s.barn}</div></div>
+        <div class="skil-meta">${!s.lesid?'<div class="skil-dot"></div>':''}<div class="skil-kl">${s.kl}</div></div>
+      </div>
+      <div class="skil-txt">${s.texti}</div>
+    </button>`).join('');
+  list.innerHTML = html;
+}
+function opnaSkilabod(id){
+  const s = SKILABOD.find(x=>x.id===id);
+  if(!s) return;
+  s.lesid = true;
+  updateUnreadBadge();
+  renderSkilabod();
+  const ov = document.createElement('div');
+  ov.className = 'skil-modal-bg'; ov.id = 'skil-modal';
+  ov.innerHTML = `<div class="skil-modal">
+    <div class="skil-modal-handle"></div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">
+      <div><div style="font-size:15px;font-weight:700;color:#fff">${s.fra}</div><div style="font-size:11px;color:rgba(255,255,255,0.3);margin-top:2px">Varðar: ${s.barn} · ${s.kl}</div></div>
+      <button onclick="document.getElementById('skil-modal').remove()" style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);border-radius:10px;width:32px;height:32px;color:rgba(255,255,255,0.4);font-size:15px;cursor:pointer">✕</button>
+    </div>
+    <div class="skil-modal-txt">${s.texti}</div>
+    <div style="font-size:11px;color:rgba(255,255,255,0.28);margin-bottom:7px">Svar — fer sem tölvupóstur til forráðamanns</div>
+    <textarea class="skil-input" rows="3" id="skil-svar" placeholder="Svar þitt..."></textarea>
+    <div style="font-size:10px;color:rgba(255,255,255,0.2);margin:7px 0 14px">Svar birtist einnig í forráðamannaappi</div>
+    <div style="display:flex;gap:8px">
+      <button onclick="document.getElementById('skil-modal').remove()" style="flex:1;height:46px;border-radius:14px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:rgba(255,255,255,0.38);font-size:14px;cursor:pointer">Loka</button>
+      <button onclick="sendaSkilabod()" style="flex:2;height:46px;border-radius:14px;border:none;background:linear-gradient(135deg,#0ea5e9,#0284c7);color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:'Baloo 2',sans-serif">Senda svar ✉</button>
+    </div>
+  </div>`;
+  document.getElementById('phone').appendChild(ov);
+}
+function sendaSkilabod(){
+  document.getElementById('skil-modal')?.remove();
+  snack('Svar sent sem tölvupóstur ✉');
+}
+
+// ── REPERTOIRE SELECT ─────────────────────────────────────────────
+function populateRepSelect(){
+  const sel = document.getElementById('rep-select');
+  if(!sel) return;
+  sel.innerHTML = '<option value="">— Velja verk af lista —</option>' +
+    REPERTOIRE.map(r=>`<option value="${r}">${r}</option>`).join('') +
+    '<option value="__custom">✎ Skrifa leiðbeiningar beint...</option>';
+}
+function onRepSelect(val){
+  const ta = document.getElementById('hw-input');
+  if(val && val !== '__custom') ta.value = val;
+  else if(val === '__custom') ta.value = '';
+  if(val) ta.focus();
+}
+
+// ── RENDER ────────────────────────────────────────────────────────
+function render(){
+  const done = STUDENTS.filter(s=>s.status).length;
+  const left = STUDENTS.filter(s=>!s.status).length;
+  document.getElementById('stat-done').textContent = done;
+  document.getElementById('stat-left').textContent = left;
+
+  const list = document.getElementById('student-list');
+  list.innerHTML = STUDENTS.map(s => {
+    const isDone = !!s.status;
+    const isNext = !isDone && STUDENTS.filter(x=>!x.status)[0]?.id === s.id;
+    const statusIcon = {present:'✓', late:'⏱', absent:'✗', forfoll:'⚠'}[s.status] || '';
+    const statusCls = s.status || 'pending';
+    const rareUnlocked = s.pracDays >= 5;
+
+    let stickerSection = '';
+    if(isDone && s.status !== 'absent' && s.status !== 'forfoll'){
+      if(s.sticker === 'sent'){
+        stickerSection = `<div class="sticker-row"><span class="sticker-sent">✓ Límmiðatilkynning send á forráðamann</span></div>`;
+      } else if(s.sticker === 'picked'){
+        stickerSection = `<div class="sticker-row"><span class="sticker-sent">✦ Límmiði valinn og vistaður</span></div>`;
+      } else {
+        const btnCls = rareUnlocked ? 'sticker-btn rare' : 'sticker-btn';
+        const btnTxt = rareUnlocked ? '✦ Leyfa límmiðaval — rare opið!' : '✦ Leyfa límmiðaval';
+        stickerSection = `<div class="sticker-row">
+          <div class="${btnCls}" onclick="openStickerSheet(${s.id},event)">
+            <span class="sticker-btn-txt">${btnTxt}</span>
+          </div>
+        </div>`;
+      }
+    }
+
+    return `<div class="student-card ${isDone?'done':isNext?'next':''}" onclick="openAtt(${s.id})">
+      <div class="sc-top">
+        <span class="sc-time">${s.time}</span>
+        <span class="sc-name">${s.name}</span>
+        <div class="sc-status ${statusCls}">${statusIcon}</div>
+      </div>
+      <div class="sc-meta">
+        <span>${s.subj}</span><div class="sc-dot"></div><span>${s.level}</span>
+        <div class="sc-dot"></div><span>${s.room}</span>
+        <div class="sc-streak">${s.pracDays >= 5 ? '✦' : '◦'} ${s.pracDays}/7</div>
+      </div>
+      ${stickerSection}
+    </div>`;
+  }).join('');
+}
+
+// ── ATTENDANCE ────────────────────────────────────────────────────
+function openAtt(id){
+  const s = STUDENTS.find(x=>x.id===id);
+  activeStudentId = id;
+  activeAtt = null;
+  document.getElementById('att-name').textContent = s.name;
+  document.getElementById('att-meta').textContent = s.subj+' · '+s.level+' · '+s.time+' · '+s.room;
+  document.getElementById('hw-area').style.display = 'none';
+  document.getElementById('hw-input').value = '';
+  document.getElementById('save-btn').className = 'save-btn wait';
+  document.getElementById('save-btn').textContent = 'Vista mætingu';
+  document.querySelectorAll('.att-btn').forEach(b=>b.classList.remove('sel'));
+  showScreen('att-sheet');
+}
+
+function closeAtt(e){
+  if(e.target.id==='att-sheet') showScreen('home');
+}
+
+function selectAtt(status){
+  activeAtt = status;
+  document.querySelectorAll('.att-btn').forEach(b=>b.classList.remove('sel'));
+  document.querySelector('.att-btn.'+status).classList.add('sel');
+  const showHw = status === 'present' || status === 'late';
+  document.getElementById('hw-area').style.display = showHw ? 'block' : 'none';
+  if(showHw) populateRepSelect();
+  const btn = document.getElementById('save-btn');
+  btn.className = 'save-btn ready';
+  btn.textContent = 'Vista mætingu';
+}
+
+function saveAtt(){
+  if(!activeAtt) return;
+  const s = STUDENTS.find(x=>x.id===activeStudentId);
+  s.status = activeAtt;
+  render();
+  showScreen('home');
+}
+
+// ── STICKER SHEET ─────────────────────────────────────────────────
+function openStickerSheet(id, e){
+  e.stopPropagation();
+  activeStickerStudentId = id;
+  selectedStickerId = null;
+  const s = STUDENTS.find(x=>x.id===id);
+  const rareUnlocked = s.pracDays >= 5;
+
+  document.getElementById('sp-student').textContent = s.name+' — límmiðaval';
+  const rb = document.getElementById('sp-rare-banner');
+  rb.style.display = rareUnlocked ? 'flex' : 'none';
+  document.getElementById('sp-rare-txt').textContent = s.pracDays+' æfingadagar — rare límmiðinn er opinn!';
+
+  renderStickerGrid(rareUnlocked);
+  updateStickerConfirm();
+  showScreen('sticker-sheet');
+}
+
+function closeStickerSheet(e){
+  if(e.target.id==='sticker-sheet') showScreen('home');
+}
+function closeStickerX(){
+  showScreen('home');
+}
+
+function renderStickerGrid(rareUnlocked){
+  const grid = document.getElementById('sp-grid');
+  grid.innerHTML = STICKERS.map(s => {
+    const rareLocked = s.rare && !rareUnlocked && !s.owned;
+    const rareAvail = s.rare && rareUnlocked && !s.owned;
+    const isSel = selectedStickerId === s.id;
+    let cls = 'pcell';
+    if(s.owned) cls += ' owned';
+    else if(rareLocked) cls += ' rare-lock';
+    else if(s.rare) cls += isSel ? ' rare-sel' : ' rare-avail';
+    else cls += isSel ? ' sel' : ' avail';
+    return `<div class="${cls}" onclick="selectSticker('${s.id}')">
+      ${s.rare && !s.owned && !rareLocked ? '<div class="pc-rare-pip">RARE</div>' : ''}
+      ${s.owned ? '<div class="pc-tick">✓</div>' : ''}
+      <span class="pc-emoji" style="${(s.owned||isSel||rareAvail)?'':'filter:grayscale(1) brightness(0.5)'}">${s.e}</span>
+      <span class="pc-name">${s.owned ? s.name : isSel ? s.name : '???'}</span>
+      ${rareLocked ? '<div class="rare-lock-overlay"><span class="rl-icon">🔒</span><span class="rl-txt">5+ dagar</span></div>' : ''}
+    </div>`;
+  }).join('');
+}
+
+function selectSticker(id){
+  const s = STICKERS.find(x=>x.id===id);
+  if(!s || s.owned) return;
+  const student = STUDENTS.find(x=>x.id===activeStickerStudentId);
+  if(s.rare && student.pracDays < 5) return;
+  selectedStickerId = id;
+  const rareUnlocked = student.pracDays >= 5;
+  renderStickerGrid(rareUnlocked);
+  updateStickerConfirm();
+}
+
+function updateStickerConfirm(){
+  const btn = document.getElementById('sp-confirm');
+  if(selectedStickerId){
+    const s = STICKERS.find(x=>x.id===selectedStickerId);
+    btn.className = 'sp-confirm ready';
+    btn.innerHTML = `<span>Vista í safnið</span><span style="font-size:15px">✦</span>`;
+  } else {
+    btn.className = 'sp-confirm wait';
+    btn.textContent = 'Veldu einn límmiða til að halda áfram';
+  }
+}
+
+function confirmSticker(){
+  if(!selectedStickerId) return;
+  const s = STICKERS.find(x=>x.id===selectedStickerId);
+  const student = STUDENTS.find(x=>x.id===activeStickerStudentId);
+  s.owned = true;
+  student.sticker = 'picked';
+
+  // stamp screen
+  document.getElementById('st-emoji').textContent = s.e;
+  document.getElementById('st-name').textContent = s.name;
+  document.getElementById('st-tag').textContent = 'GEIMFARAR'+(s.rare?' · RARE':'');
+  document.getElementById('st-quote').textContent = '"'+s.desc+'"';
+
+  // particles
+  const pc = document.getElementById('stamp-particles');
+  pc.innerHTML = '';
+  const cols = ['#a78bfa','#7dd3fc','#fcd34d','#f9a8d4','#86efac'];
+  for(let i=0;i<22;i++){
+    const a=(i/22)*Math.PI*2, d=55+Math.random()*90;
+    const el = document.createElement('div');
+    el.className='pts';
+    const sz=2+Math.random()*5;
+    el.style.cssText=`width:${sz}px;height:${sz}px;background:${cols[i%cols.length]};left:50%;top:42%;--tx:${(Math.cos(a)*d).toFixed(0)}px;--ty:${(Math.sin(a)*d-30).toFixed(0)}px;--d:${(.45+Math.random()*.45).toFixed(2)}s;--dl:${(Math.random()*.12).toFixed(2)}s`;
+    pc.appendChild(el);
+  }
+  const se=document.getElementById('st-emoji');
+  se.style.animation='none';se.offsetHeight;se.style.animation='';
+  showScreen('stamp-overlay');
+}
+
+function sendToParent(){
+  const student = STUDENTS.find(x=>x.id===activeStickerStudentId);
+  student.sticker = 'sent';
+  showScreen('home');
+  render();
+  // show sent confirmation
+  const ov = document.createElement('div');
+  ov.className='sent-overlay';
+  ov.innerHTML=`<div class="sent-card">
+    <div class="sent-icon">📱</div>
+    <h2 class="sent-title">Tilkynning send!</h2>
+    <p class="sent-sub">Forráðamaður ${student.name} fær tilkynningu um að velja límmiða í heimaappinu.</p>
+    <button class="sent-ok" onclick="this.closest('.sent-overlay').remove()">Allt í lagi</button>
+  </div>`;
+  document.getElementById('phone').appendChild(ov);
+}
+
+function closeStamp(){
+  render();
+  showScreen('home');
+}
+
+// ── SCREEN HELPER ─────────────────────────────────────────────────
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// init
+render();
+updateUnreadBadge();
+</script>
+</body>
+</html>
