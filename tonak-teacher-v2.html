@@ -665,17 +665,23 @@ async function loadTeacherData() {
       return;
     }
 
-    // 4. Uppfæra STUDENTS fylkið með raunverulegum gögnum
+    // 4. Sækja nöfn nemenda úr Students lista
+    const allStudents = await getListItems('Students');
+    const studentMap = {};
+    allStudents.forEach(s => { studentMap[String(s._id)] = s.Nafn || s.Title || 'Nemandi'; });
+
+    // 5. Uppfæra STUDENTS fylkið með raunverulegum gögnum
     STUDENTS.length = 0;
     todaySchedule.forEach(sch => {
-      const slot = mySlots.find(s => String(s._id) === String(sch.RoomSlotId));
+      const slot = mySlots.find(s => String(s._id) === String(sch.RoomSlotLookupId));
+      const nafn = studentMap[String(sch.StudentLookupId)] || 'Nemandi';
       STUDENTS.push({
         id: Number(sch._id),
-        name: sch.StudentLookupValue || 'Nemandi',
+        name: nafn,
         subj: slot?.SubjectGroup || '',
         level: sch.TeacherSubjectLookupValue || '',
         time: slot?.StartTime || '',
-        room: slot?.RoomLookupValue || '',
+        room: slot?.RoomLookupId ? 'Stofa ' + slot.RoomLookupId : '',
         status: null,
         pracDays: 0,
         sticker: null,
