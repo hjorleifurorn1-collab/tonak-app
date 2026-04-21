@@ -641,14 +641,12 @@ async function loadTeacherData() {
       return; // Nota gervigögn
     }
 
-    // 2. Finna RoomSlots kennara í dag
-    const slots = await getListItems('RoomSlots',
-      `fields/Weekday eq '${todayWD}'`
-    );
-    // Sía á viðkomandi kennara (Lookup field)
+    // 2. Finna RoomSlots kennara í dag — sækja alla og sía client-side
+    const slots = await getListItems('RoomSlots');
     const mySlots = slots.filter(s =>
-      String(s.AssignedTeacherId) === String(staffRecord._id) ||
-      String(s.AssignedTeacherLookupValue) === String(staffRecord.Nafn)
+      s.Weekday === todayWD &&
+      (String(s.AssignedTeacherId) === String(staffRecord._id) ||
+      String(s.AssignedTeacherLookupValue) === String(staffRecord.Nafn))
     );
 
     if (mySlots.length === 0) {
