@@ -6,7 +6,6 @@
 <title>TONAK — Kennaraapp</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700;800&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 :root{
@@ -582,8 +581,8 @@ function showApp() {
   updateUnreadBadge();
 }
 
-// Ræsa MSAL við síðuhleðslu
-msalInit().catch(console.error);
+// Ræsa MSAL þegar allt er hlaðið
+window.addEventListener('load', () => msalInit().catch(console.error));
 
 // ── STARS ─────────────────────────────────────────────────────────
 const cv = document.getElementById('stars');
@@ -1375,5 +1374,6 @@ function showScreen(id){
 // init — keyrt af showApp() eftir innskráningu
 // render() og updateUnreadBadge() eru kallaðar þaðan
 </script>
+<script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js"></script>
 </body>
 </html>
