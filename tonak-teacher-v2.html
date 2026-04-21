@@ -634,6 +634,7 @@ async function getListItems(listName, filter) {
   return (data.value || []).map(item => ({ ...item.fields, _id: item.id }));
 }
 
+const WEEKDAYS_IS = ['Sunnudagur','Mánudagur','Þriðjudagur','Miðvikudagur','Fimmtudagur','Föstudagur','Laugardagur'];
 let _staffId = null;
 let _skolaarId = null;
 
