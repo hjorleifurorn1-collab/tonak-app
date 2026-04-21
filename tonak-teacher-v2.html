@@ -1428,8 +1428,8 @@ async function saveAtt(){
       Title: s.name + ' — ' + new Date().toLocaleDateString('is-IS'),
       AttendanceDate: today,
       Status: stadaMap[activeAtt] || activeAtt,
-      StudentId: Number(s.spStudentId),
-      StudentScheduleId: Number(s.spScheduleId),
+      StudentLookupId: Number(s.spStudentId),
+      StudentScheduleLookupId: Number(s.spScheduleId),
       MarkedBy: currentUser?.name || currentUser?.username || '',
       MarkedTimestamp: today
     };
