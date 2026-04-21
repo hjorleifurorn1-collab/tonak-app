@@ -1419,16 +1419,17 @@ async function saveAtt(){
 
   try {
     const siteId = await getSiteId();
+    const stadaMap = {present:'Mætti', late:'Seinn', absent:'Fjarverandi', forfoll:'Forföll tilkynnt'};
     const fields = {
       Title: s.name + ' — ' + new Date().toLocaleDateString('is-IS'),
       StudentId: Number(s.spStudentId),
-      TeacherId: Number(_staffId),
+      StudentScheduleId: Number(s.spScheduleId),
       AttendanceDate: today,
-      Stada: stadaMap[activeAtt] || activeAtt,
-      Athugasemd: athugasemd,
-      SkradAf: 'Kennari'
+      Status: stadaMap[activeAtt] || activeAtt,
+      Notes: athugasemd,
+      MarkedBy: currentUser?.name || currentUser?.username || 'Kennari',
+      MarkedTimestamp: today
     };
-    if (_skolaarId) fields.SkolaarId = Number(_skolaarId);
     await graphPost('/sites/' + siteId + '/lists/AttendanceLog/items', { fields });
     snack('✓ Mæting vistuð í SharePoint');
   } catch(e) {
