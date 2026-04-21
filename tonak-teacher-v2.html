@@ -1423,14 +1423,13 @@ async function saveAtt(){
 
   try {
     const siteId = await getSiteId();
-    const stadaMap = {present:'Mætti', late:'Seinn', absent:'Fjarverandi', forfoll:'Forföll tilkynnt'};
     const fields = {
       Title: s.name + ' — ' + new Date().toLocaleDateString('is-IS'),
       AttendanceDate: today,
       Status: stadaMap[activeAtt] || activeAtt,
       StudentLookupId: Number(s.spStudentId),
       StudentScheduleLookupId: Number(s.spScheduleId),
-      MarkedBy: currentUser?.name || currentUser?.username || '',
+      MarkedByLookupId: Number(_staffId),
       MarkedTimestamp: today
     };
     if (athugasemd) fields.Notes = athugasemd;
