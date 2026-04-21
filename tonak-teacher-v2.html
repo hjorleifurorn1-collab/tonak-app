@@ -654,10 +654,10 @@ async function loadTeacherData() {
     }
 
     // 3. Finna StudentSchedule færslur fyrir þessi slots
-    const allSchedule = await getListItems('StudentSchedule', 'fields/IsActive eq true');
+    const allSchedule = await getListItems('StudentSchedule');
     const mySlotIds = mySlots.map(s => String(s._id));
     const todaySchedule = allSchedule.filter(s =>
-      mySlotIds.includes(String(s.RoomSlotId))
+      s.IsActive === true && mySlotIds.includes(String(s.RoomSlotLookupId))
     );
 
     if (todaySchedule.length === 0) {
