@@ -1422,14 +1422,15 @@ async function saveAtt(){
     const stadaMap = {present:'Mætti', late:'Seinn', absent:'Fjarverandi', forfoll:'Forföll tilkynnt'};
     const fields = {
       Title: s.name + ' — ' + new Date().toLocaleDateString('is-IS'),
-      StudentId: Number(s.spStudentId),
-      StudentScheduleId: Number(s.spScheduleId),
       AttendanceDate: today,
       Status: stadaMap[activeAtt] || activeAtt,
       Notes: athugasemd,
       MarkedBy: currentUser?.name || currentUser?.username || 'Kennari',
       MarkedTimestamp: today
     };
+    // Lookup fields — aðeins bæta við ef gildi eru til
+    if (s.spStudentId) fields.StudentId = Number(s.spStudentId);
+    if (s.spScheduleId) fields.StudentScheduleId = Number(s.spScheduleId);
     await graphPost('/sites/' + siteId + '/lists/AttendanceLog/items', { fields });
     snack('✓ Mæting vistuð í SharePoint');
   } catch(e) {
