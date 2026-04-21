@@ -878,7 +878,7 @@ const PANTANIR = Object.fromEntries(VIKUDAGS.map(d => [d, null]));
 
 async function loadMatseðill() {
   try {
-    const allMat = await getListItems('Matseill');
+    const allMat = await getListItems('d67a8d28-2a61-4b57-8c34-53288d7c286a');
     const vikuMatur = allMat.filter(m => VIKUDAGS.includes(m.Dagsetning?.split('T')[0]));
 
     MATSEDILL = VIKUDAGS.map((dags, i) => {
