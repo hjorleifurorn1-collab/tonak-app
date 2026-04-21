@@ -645,8 +645,7 @@ async function loadTeacherData() {
     const slots = await getListItems('RoomSlots');
     const mySlots = slots.filter(s =>
       s.Weekday === todayWD &&
-      (String(s.AssignedTeacherId) === String(staffRecord._id) ||
-      String(s.AssignedTeacherLookupValue) === String(staffRecord.Nafn))
+      String(s.AssignedTeacherLookupId) === String(staffRecord._id)
     );
 
     if (mySlots.length === 0) {
