@@ -6,6 +6,7 @@
 <title>TONAK — Kennaraapp</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700;800&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 :root{
@@ -32,14 +33,24 @@ html,body{height:100%;background:#030810;display:flex;align-items:center;justify
 .phone{width:390px;height:844px;background:var(--bg);border-radius:50px;overflow:hidden;position:relative;border:1.5px solid rgba(56,189,248,0.12);box-shadow:0 40px 120px rgba(0,0,0,0.6)}
 @media(max-height:900px){.phone{width:360px;height:780px;border-radius:44px}}
 @media(max-height:820px){.phone{width:340px;height:700px;border-radius:40px}}
-
+ 
 canvas#stars{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 .orb{position:absolute;border-radius:50%;filter:blur(65px);pointer-events:none}
-
+ 
 .screen{position:absolute;inset:0;display:flex;flex-direction:column;opacity:0;pointer-events:none;transition:opacity .3s ease}
 .screen.active{opacity:1;pointer-events:all}
-
-/* ── TOPBAR ── */
+ 
+/* ── LOGIN SCREEN ── */
+.login-screen{position:absolute;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 32px;z-index:100}
+.login-logo{font-family:'Baloo 2',sans-serif;font-size:32px;font-weight:800;color:var(--sky);letter-spacing:-0.5px;margin-bottom:6px}
+.login-sub{font-size:12px;color:var(--text-dim);margin-bottom:48px;letter-spacing:0.3px}
+.login-btn{width:100%;padding:16px;border-radius:18px;border:none;background:linear-gradient(135deg,var(--sky2),#2563eb);color:#fff;font-family:'Baloo 2',sans-serif;font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:all .2s;box-shadow:0 8px 24px rgba(14,165,233,0.25)}
+.login-btn:active{transform:scale(0.97);opacity:0.9}
+.login-btn img{width:20px;height:20px}
+.login-spinner{width:20px;height:20px;border:2.5px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.login-note{font-size:11px;color:var(--text-dimmer);margin-top:20px;text-align:center;line-height:1.6}
+.login-error{background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);border-radius:12px;padding:10px 14px;font-size:12px;color:rgba(252,165,165,0.9);text-align:center;margin-bottom:16px;display:none}
 .topbar{display:flex;justify-content:space-between;align-items:center;padding:16px 24px 4px;flex-shrink:0;z-index:10}
 .teacher-info{display:flex;flex-direction:column}
 .teacher-name{font-family:'Baloo 2',sans-serif;font-size:16px;font-weight:700;color:var(--text);line-height:1.1}
@@ -47,23 +58,23 @@ canvas#stars{position:absolute;inset:0;width:100%;height:100%;pointer-events:non
 .sick-btn{display:flex;align-items:center;gap:5px;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);border-radius:12px;padding:6px 12px;cursor:pointer;transition:all .2s}
 .sick-btn:active{transform:scale(0.95)}
 .sick-txt{font-size:11px;font-weight:700;color:rgba(239,68,68,0.8)}
-
+ 
 /* ── STATS ROW ── */
 .stats-row{display:flex;gap:8px;padding:8px 20px 0;flex-shrink:0}
 .stat-card{flex:1;background:var(--card);border:1px solid var(--card-b);border-radius:14px;padding:9px 10px;text-align:center}
 .stat-num{font-family:'Baloo 2',sans-serif;font-size:22px;font-weight:800;color:var(--sky);line-height:1}
 .stat-lbl{font-size:9px;color:var(--text-dim);margin-top:2px;font-weight:600;letter-spacing:.3px}
-
+ 
 /* ── STUDENT LIST ── */
 .day-scroll{flex:1;overflow-y:auto;padding:10px 20px 0}
 .day-scroll::-webkit-scrollbar{display:none}
 .section-lbl{font-size:9px;font-weight:700;letter-spacing:1.8px;color:var(--text-dimmer);margin:8px 0 8px}
-
+ 
 .student-card{background:var(--card);border:1px solid var(--card-b);border-radius:18px;padding:13px 16px;margin-bottom:8px;cursor:pointer;transition:all .2s;position:relative}
 .student-card:active{transform:scale(0.98)}
 .student-card.done{border-color:rgba(34,197,94,0.2);background:rgba(34,197,94,0.04)}
 .student-card.next{border-color:rgba(56,189,248,0.35);background:rgba(56,189,248,0.05);box-shadow:0 0 14px rgba(56,189,248,0.1)}
-
+ 
 .sc-top{display:flex;align-items:center;gap:10px;margin-bottom:6px}
 .sc-time{font-family:'Baloo 2',sans-serif;font-size:16px;font-weight:800;color:var(--sky);min-width:42px}
 .sc-name{font-family:'Baloo 2',sans-serif;font-size:15px;font-weight:700;color:var(--text);flex:1}
@@ -72,11 +83,11 @@ canvas#stars{position:absolute;inset:0;width:100%;height:100%;pointer-events:non
 .sc-status.present{background:rgba(34,197,94,0.15);border:1.5px solid rgba(34,197,94,0.35);color:var(--green)}
 .sc-status.late{background:rgba(245,158,11,0.15);border:1.5px solid rgba(245,158,11,0.35);color:var(--amber)}
 .sc-status.absent{background:rgba(239,68,68,0.12);border:1.5px solid rgba(239,68,68,0.25);color:var(--red)}
-
+ 
 .sc-meta{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text-dim)}
 .sc-dot{width:4px;height:4px;border-radius:50%;background:rgba(255,255,255,0.2)}
 .sc-streak{display:flex;align-items:center;gap:4px;background:rgba(250,200,50,0.08);border:1px solid rgba(250,200,50,0.2);border-radius:8px;padding:2px 7px;font-size:10px;font-weight:700;color:rgba(250,200,50,0.7)}
-
+ 
 /* sticker button on done cards */
 .sticker-row{display:flex;align-items:center;gap:8px;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.05)}
 .sticker-btn{display:flex;align-items:center;gap:6px;background:rgba(109,40,217,0.15);border:1px solid rgba(150,100,255,0.28);border-radius:10px;padding:5px 12px;cursor:pointer;transition:all .15s;flex:1}
@@ -85,7 +96,7 @@ canvas#stars{position:absolute;inset:0;width:100%;height:100%;pointer-events:non
 .sticker-btn.rare{background:rgba(120,80,10,0.18);border-color:rgba(200,150,30,0.3)}
 .sticker-btn.rare .sticker-btn-txt{color:rgba(255,200,60,0.8)}
 .sticker-sent{display:flex;align-items:center;gap:5px;font-size:11px;color:rgba(34,197,94,0.65);font-weight:600}
-
+ 
 /* tabbar */
 .tabbar{display:flex;padding:4px 14px 16px;gap:2px;flex-shrink:0}
 .tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:7px 2px;border-radius:13px;border:none;background:transparent;cursor:pointer;transition:background .15s}
@@ -93,7 +104,7 @@ canvas#stars{position:absolute;inset:0;width:100%;height:100%;pointer-events:non
 .tab-i{font-size:16px}
 .tab-l{font-size:8px;color:var(--text-dimmer);font-weight:600;letter-spacing:.3px}
 .tab.active .tab-l{color:rgba(56,189,248,0.7)}
-
+ 
 /* ── ATTENDANCE SHEET ── */
 #att-sheet{z-index:30;background:rgba(5,13,24,0.92)}
 .att-inner{position:absolute;bottom:0;left:0;right:0;background:#0a1628;border-radius:28px 28px 0 0;border:1px solid rgba(56,189,248,0.12);border-bottom:none;padding:0 22px 28px;animation:slideup .3s ease-out forwards}
@@ -113,19 +124,19 @@ canvas#stars{position:absolute;inset:0;width:100%;height:100%;pointer-events:non
 .att-btn.late.sel{border-color:rgba(245,158,11,0.7);background:rgba(245,158,11,0.18);box-shadow:0 0 14px rgba(245,158,11,0.2)}
 .att-btn.absent.sel{border-color:rgba(239,68,68,0.6);background:rgba(239,68,68,0.14)}
 .att-btn.forfoll.sel{border-color:rgba(255,255,255,0.3);background:rgba(255,255,255,0.08)}
-
+ 
 /* homework area */
 .hw-area{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:12px 14px;margin-bottom:14px}
 .hw-label{font-size:9px;font-weight:700;letter-spacing:1.5px;color:rgba(56,189,248,0.4);margin:0 0 8px}
 .hw-input{width:100%;background:transparent;border:none;outline:none;font-family:'Nunito',sans-serif;font-size:13px;color:var(--text);resize:none;min-height:40px;line-height:1.5}
 .hw-input::placeholder{color:rgba(255,255,255,0.2)}
-
+ 
 /* save button */
 .save-btn{width:100%;height:58px;border-radius:18px;border:none;font-family:'Baloo 2',sans-serif;font-size:16px;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px}
 .save-btn.ready{background:linear-gradient(135deg,#0369a1,#0e7490);color:#fff;box-shadow:0 6px 22px rgba(3,105,161,0.35)}
 .save-btn.ready:active{transform:scale(0.97)}
 .save-btn.wait{background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.3);border:1px solid rgba(255,255,255,0.1)}
-
+ 
 /* ── STICKER PICK SHEET ── */
 #sticker-sheet{z-index:40;background:rgba(3,5,15,0.9)}
 .sp-inner{position:absolute;bottom:0;left:0;right:0;background:#07051a;border-radius:28px 28px 0 0;border:1px solid rgba(124,58,237,0.18);border-bottom:none;padding:0 20px 24px;animation:slideup .35s ease-out forwards}
@@ -140,7 +151,7 @@ canvas#stars{position:absolute;inset:0;width:100%;height:100%;pointer-events:non
 .sp-scroll{max-height:220px;overflow-y:auto;padding:8px 0 0}
 .sp-scroll::-webkit-scrollbar{display:none}
 .sp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:10px}
-
+ 
 .pcell{aspect-ratio:1;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;position:relative;transition:all .25s cubic-bezier(.34,1.4,.64,1);cursor:default;user-select:none}
 .pcell.avail{background:rgba(180,180,200,0.05);border:1.5px solid rgba(180,180,200,0.12);cursor:pointer}
 .pcell.avail:active{transform:scale(0.93)}
@@ -173,14 +184,14 @@ canvas#stars{position:absolute;inset:0;width:100%;height:100%;pointer-events:non
 .sp-confirm.ready:active{transform:scale(0.97)}
 .sp-confirm.wait{background:rgba(255,255,255,0.07);color:rgba(255,255,255,0.45);border:1.5px solid rgba(255,255,255,0.14)}
 .sp-note{font-size:10px;color:var(--text-dimmer);text-align:center;margin:5px 0 0}
-
+ 
 /* OR send to parent */
 .or-row{display:flex;align-items:center;gap:8px;margin:10px 0 8px}
 .or-line{flex:1;height:1px;background:rgba(255,255,255,0.07)}
 .or-txt{font-size:10px;color:var(--text-dimmer)}
 .send-parent-btn{width:100%;height:46px;border-radius:14px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.5);font-family:'Baloo 2',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all .15s}
 .send-parent-btn:active{transform:scale(0.97);background:rgba(255,255,255,0.08)}
-
+ 
 /* ── STAMP OVERLAY ── */
 #stamp-overlay{z-index:50}
 .stamp-inner-full{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;background:var(--bg)}
@@ -202,7 +213,7 @@ canvas#stars{position:absolute;inset:0;width:100%;height:100%;pointer-events:non
 @keyframes fup{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 .pts{position:absolute;border-radius:50%;animation:ptfly var(--d) var(--dl) ease-out forwards;pointer-events:none}
 @keyframes ptfly{0%{opacity:1;transform:translate(0,0)}100%{opacity:0;transform:translate(var(--tx),var(--ty))}}
-
+ 
 /* sent to parent overlay */
 .sent-overlay{position:absolute;inset:0;z-index:60;background:rgba(5,13,24,0.9);display:flex;align-items:center;justify-content:center;animation:fdin .3s ease-out}
 @keyframes fdin{from{opacity:0}to{opacity:1}}
@@ -211,15 +222,15 @@ canvas#stars{position:absolute;inset:0;width:100%;height:100%;pointer-events:non
 .sent-title{font-family:'Baloo 2',sans-serif;font-size:18px;font-weight:800;color:var(--text);margin:0 0 8px}
 .sent-sub{font-size:13px;color:var(--text-dim);line-height:1.6;margin:0 0 20px}
 .sent-ok{width:100%;height:48px;border-radius:14px;background:rgba(56,189,248,0.12);border:1px solid rgba(56,189,248,0.25);color:rgba(56,189,248,0.8);font-family:'Baloo 2',sans-serif;font-size:14px;font-weight:700;cursor:pointer}
-
+ 
 /* snack */
 .snack{position:absolute;bottom:90px;left:50%;transform:translateX(-50%);background:rgba(10,22,40,0.96);border:1px solid rgba(56,189,248,0.3);border-radius:14px;padding:10px 18px;font-size:13px;color:#7dd3fc;z-index:200;white-space:nowrap;backdrop-filter:blur(20px);animation:snackin .3s ease;pointer-events:none}
 @keyframes snackin{from{opacity:0;transform:translateX(-50%) translateY(8px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
-
+ 
 /* veikindi modal */
 .modal-bg{position:absolute;inset:0;background:rgba(4,5,12,0.88);display:flex;align-items:center;justify-content:center;z-index:80;animation:fdin .2s ease;padding:24px}
 .modal-box{background:linear-gradient(145deg,#13192d,#08090f);border-radius:24px;padding:28px 24px;width:100%;max-width:340px;border:1px solid rgba(239,68,68,0.22)}
-
+ 
 /* nemendur screen */
 #nemendur{z-index:10;overflow-y:auto}
 .nem-scroll{flex:1;overflow-y:auto;padding:8px 20px 0}
@@ -233,7 +244,7 @@ canvas#stars{position:absolute;inset:0;width:100%;height:100%;pointer-events:non
 .nem-s{font-size:10px;color:var(--text-dimmer);margin-top:2px}
 .rep-item{padding:9px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:13px;color:rgba(255,255,255,0.6)}
 .rep-more{padding-top:10px;font-size:12px;color:rgba(56,189,248,0.4);text-align:center}
-
+ 
 /* matur screen */
 .mat-scroll{flex:1;overflow-y:auto;padding:14px 0 8px}
 .mat-scroll::-webkit-scrollbar{display:none}
@@ -258,11 +269,11 @@ canvas#stars{position:absolute;inset:0;width:100%;height:100%;pointer-events:non
 .skil-input{width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:12px 15px;color:#fff;font-size:14px;outline:none;resize:none;font-family:'Nunito',sans-serif;transition:border-color .2s}
 .skil-input:focus{border-color:rgba(56,189,248,0.35)}
 .skil-input::placeholder{color:rgba(255,255,255,0.25)}
-
+ 
 /* repertoire select */
 .rep-select{width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(56,189,248,0.2);border-radius:14px;padding:10px 14px;color:#fff;font-size:13px;outline:none;appearance:none;cursor:pointer;font-family:'Nunito',sans-serif;margin-bottom:8px}
 .rep-select option{background:#10172a;color:#fff}
-
+ 
 /* tónleikar screen */
 #tonleikar{z-index:10;overflow-y:auto}
 .ton-scroll{flex:1;overflow-y:auto;padding:8px 20px 0}
@@ -289,7 +300,7 @@ canvas#stars{position:absolute;inset:0;width:100%;height:100%;pointer-events:non
 .ton-skra-btn{width:100%;height:42px;border-radius:14px;border:1.5px solid rgba(56,189,248,0.28);background:rgba(56,189,248,0.07);color:rgba(56,189,248,0.8);font-family:'Baloo 2',sans-serif;font-size:13px;font-weight:700;cursor:pointer;margin-top:10px;transition:all .2s}
 .ton-skra-btn:active{transform:scale(0.97)}
 .ton-full-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.25);border-radius:8px;padding:3px 10px;font-size:10px;font-weight:700;color:rgba(134,239,172,0.7);margin-top:10px}
-
+ 
 /* tónleikar skráningargluggi */
 .ton-modal-bg{position:absolute;inset:0;background:rgba(4,5,12,0.88);display:flex;align-items:flex-end;justify-content:center;z-index:80;animation:fdin .2s ease}
 .ton-modal{background:linear-gradient(180deg,#10172a 0%,#08090f 100%);border:1px solid rgba(56,189,248,0.15);border-radius:28px 28px 0 0;padding:20px 20px 36px;width:100%}
@@ -308,7 +319,23 @@ canvas#stars{position:absolute;inset:0;width:100%;height:100%;pointer-events:non
   <div class="orb" style="width:180px;height:180px;top:-50px;right:-50px;background:#0369a1;opacity:.09"></div>
   <div class="orb" style="width:140px;height:140px;bottom:140px;left:-40px;background:#0891b2;opacity:.07"></div>
   <div class="orb" style="width:100px;height:100px;top:200px;right:-20px;background:#22d3ee;opacity:.05"></div>
-
+ 
+  <!-- ── LOGIN SCREEN ── -->
+  <div class="login-screen" id="login-screen">
+    <canvas id="stars-login" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none"></canvas>
+    <div style="position:relative;width:100%;display:flex;flex-direction:column;align-items:center">
+      <div style="font-size:48px;margin-bottom:16px">🎵</div>
+      <div class="login-logo">TONAK</div>
+      <div class="login-sub">Tónlistarskólinn á Akureyri — Kennaraapp</div>
+      <div class="login-error" id="login-error">Villa við innskráningu. Reyndu aftur.</div>
+      <button class="login-btn" id="login-btn" onclick="msalLogin()">
+        <svg width="20" height="20" viewBox="0 0 21 21" fill="none"><rect x="1" y="1" width="9" height="9" fill="#F25022"/><rect x="11" y="1" width="9" height="9" fill="#7FBA00"/><rect x="1" y="11" width="9" height="9" fill="#00A4EF"/><rect x="11" y="11" width="9" height="9" fill="#FFB900"/></svg>
+        Skrá mig inn með Microsoft
+      </button>
+      <div class="login-note">Notaðu Office 365 aðganginn þinn<br>hjá Akureyrarbæ</div>
+    </div>
+  </div>
+ 
   <!-- ── HOME ── -->
   <div class="screen active" id="home">
     <div class="topbar">
@@ -320,18 +347,18 @@ canvas#stars{position:absolute;inset:0;width:100%;height:100%;pointer-events:non
         <span>🤒</span><span class="sick-txt">Ég er veikur</span>
       </button>
     </div>
-
+ 
     <div class="stats-row">
       <div class="stat-card"><div class="stat-num" id="stat-done">0</div><div class="stat-lbl">SKRÁÐ</div></div>
       <div class="stat-card"><div class="stat-num" id="stat-left">4</div><div class="stat-lbl">EFTIR</div></div>
       <div class="stat-card"><div class="stat-num">4</div><div class="stat-lbl">ALLS Í DAG</div></div>
     </div>
-
+ 
     <div class="day-scroll">
       <p class="section-lbl">DAGURINN MINN</p>
       <div id="student-list"></div>
     </div>
-
+ 
     <div class="tabbar" id="tabbar">
       <button class="tab active" onclick="setTab('home')"><span class="tab-i">📅</span><span class="tab-l">Dagurinn</span></button>
       <button class="tab" onclick="setTab('nemendur')"><span class="tab-i">👥</span><span class="tab-l">Nemendur</span></button>
@@ -340,7 +367,7 @@ canvas#stars{position:absolute;inset:0;width:100%;height:100%;pointer-events:non
       <button class="tab" onclick="setTab('skilabod')" id="tab-skil"><span class="tab-i">✉️</span><span class="tab-l" id="tab-skil-lbl">Skilaboð</span></button>
     </div>
   </div>
-
+ 
   <!-- ── NEMENDUR SCREEN ── -->
   <div class="screen" id="nemendur">
     <div class="topbar">
@@ -358,7 +385,7 @@ canvas#stars{position:absolute;inset:0;width:100%;height:100%;pointer-events:non
       <button class="tab" onclick="setTab('skilabod')" id="tab-skil2"><span class="tab-i">✉️</span><span class="tab-l" id="tab-skil-lbl2">Skilaboð</span></button>
     </div>
   </div>
-
+ 
   <!-- ── TÓNLEIKAR SCREEN ── -->
   <div class="screen" id="tonleikar">
     <div class="topbar">
@@ -376,7 +403,7 @@ canvas#stars{position:absolute;inset:0;width:100%;height:100%;pointer-events:non
       <button class="tab" onclick="setTab('skilabod')"><span class="tab-i">✉️</span><span class="tab-l" id="tab-skil-lbl3">Skilaboð</span></button>
     </div>
   </div>
-
+ 
   <!-- ── SKILABOÐ SCREEN ── -->
   <div class="screen" id="skilabod">
     <div class="topbar">
@@ -394,7 +421,7 @@ canvas#stars{position:absolute;inset:0;width:100%;height:100%;pointer-events:non
       <button class="tab active" onclick="setTab('skilabod')"><span class="tab-i">✉️</span><span class="tab-l">Skilaboð</span></button>
     </div>
   </div>
-
+ 
   <!-- ── MATUR SCREEN ── -->
   <div class="screen" id="matur">
     <div class="topbar">
@@ -412,7 +439,7 @@ canvas#stars{position:absolute;inset:0;width:100%;height:100%;pointer-events:non
       <button class="tab" onclick="setTab('skilabod')"><span class="tab-i">✉️</span><span class="tab-l">Skilaboð</span></button>
     </div>
   </div>
-
+ 
   <!-- ── ATTENDANCE SHEET ── -->
   <div class="screen" id="att-sheet" onclick="closeAtt(event)">
     <div class="att-inner" onclick="event.stopPropagation()">
@@ -436,7 +463,7 @@ canvas#stars{position:absolute;inset:0;width:100%;height:100%;pointer-events:non
       <button class="save-btn wait" id="save-btn" onclick="saveAtt()">Vista mætingu</button>
     </div>
   </div>
-
+ 
   <!-- ── STICKER SHEET ── -->
   <div class="screen" id="sticker-sheet" onclick="closeStickerSheet(event)">
     <div class="sp-inner" onclick="event.stopPropagation()">
@@ -465,7 +492,7 @@ canvas#stars{position:absolute;inset:0;width:100%;height:100%;pointer-events:non
       <button class="send-parent-btn" onclick="sendToParent()">📱 Senda tilkynningu á forráðamann í staðinn</button>
     </div>
   </div>
-
+ 
   <!-- ── STAMP ── -->
   <div class="screen" id="stamp-overlay">
     <div class="stamp-glow"></div>
@@ -483,8 +510,81 @@ canvas#stars{position:absolute;inset:0;width:100%;height:100%;pointer-events:non
     </div>
   </div>
 </div>
-
+ 
 <script>
+// ── MSAL AUTH ─────────────────────────────────────────────────────
+const MSAL_CONFIG = {
+  auth: {
+    clientId: 'e3df23af-316e-468b-b616-b177c474c173',
+    authority: 'https://login.microsoftonline.com/fce2332b-f493-407e-a472-f173f9a0afea',
+    redirectUri: 'https://hjorleifurorn1-collab.github.io/tonak-app/tonak-teacher-v2.html',
+  },
+  cache: { cacheLocation: 'sessionStorage' }
+};
+const SCOPES = ['User.Read', 'Sites.ReadWrite.All'];
+const msalApp = new msal.PublicClientApplication(MSAL_CONFIG);
+ 
+let currentUser = null;
+ 
+async function msalInit() {
+  await msalApp.initialize();
+  // Handle redirect response (koma til baka eftir login)
+  const resp = await msalApp.handleRedirectPromise();
+  if (resp) {
+    currentUser = resp.account;
+    msalApp.setActiveAccount(currentUser);
+    showApp();
+    return;
+  }
+  // Athuga hvort notandi sé þegar innskráður
+  const accounts = msalApp.getAllAccounts();
+  if (accounts.length > 0) {
+    currentUser = accounts[0];
+    msalApp.setActiveAccount(currentUser);
+    showApp();
+  }
+  // Annars er login-screen sjáanlegur
+}
+ 
+async function msalLogin() {
+  const btn = document.getElementById('login-btn');
+  const err = document.getElementById('login-error');
+  err.style.display = 'none';
+  btn.innerHTML = '<div class="login-spinner"></div>';
+  btn.disabled = true;
+  try {
+    await msalApp.loginRedirect({ scopes: SCOPES });
+  } catch(e) {
+    err.style.display = 'block';
+    btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 21 21" fill="none"><rect x="1" y="1" width="9" height="9" fill="#F25022"/><rect x="11" y="1" width="9" height="9" fill="#7FBA00"/><rect x="1" y="11" width="9" height="9" fill="#00A4EF"/><rect x="11" y="11" width="9" height="9" fill="#FFB900"/></svg> Skrá mig inn með Microsoft';
+    btn.disabled = false;
+  }
+}
+ 
+async function getAccessToken() {
+  try {
+    const result = await msalApp.acquireTokenSilent({ scopes: SCOPES, account: currentUser });
+    return result.accessToken;
+  } catch(e) {
+    // Token runnið út — login aftur
+    await msalApp.acquireTokenRedirect({ scopes: SCOPES });
+  }
+}
+ 
+function showApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  // Setja nafn kennara úr Microsoft reikningi
+  const name = currentUser?.name || currentUser?.username || 'Kennari';
+  document.querySelectorAll('.teacher-name').forEach(el => {
+    if (el.textContent === 'Jón Sigurðsson') el.textContent = name;
+  });
+  render();
+  updateUnreadBadge();
+}
+ 
+// Ræsa MSAL við síðuhleðslu
+msalInit().catch(console.error);
+ 
 // ── STARS ─────────────────────────────────────────────────────────
 const cv = document.getElementById('stars');
 const ctx = cv.getContext('2d');
@@ -508,7 +608,7 @@ function drawStars(){
   ctx.globalAlpha=1;requestAnimationFrame(drawStars);
 }
 drawStars();
-
+ 
 // ── STATE ────────────────────────────────────────────────────────
 const STUDENTS = [
   {id:1, name:'Anna Björk', subj:'Píanó', level:'G-nám', time:'13:00', room:'Stofa 3', status:null, pracDays:5, sticker:null},
@@ -516,7 +616,7 @@ const STUDENTS = [
   {id:3, name:'Sigríður Hanna', subj:'Píanó', level:'G-nám', time:'14:30', room:'Stofa 3', status:'present', pracDays:6, sticker:'sent'},
   {id:4, name:'Björn Leó', subj:'Trommur', level:'G-nám', time:'15:15', room:'Stofa 5', status:null, pracDays:2, sticker:null},
 ];
-
+ 
 const STICKERS = [
   {id:'s1',e:'🚀',name:'Geimskip',owned:true,rare:false,desc:'Flyður í stjörnurnar — hraðar en nokkuð annað'},
   {id:'s2',e:'🌙',name:'Tunglið',owned:true,rare:false,desc:'Alltaf hér, alltaf kyr'},
@@ -525,7 +625,7 @@ const STICKERS = [
   {id:'s5',e:'🌌',name:'Vetrarbrautin',owned:false,rare:false,desc:'Óendanleg og dularfull'},
   {id:'sr',e:'👾',name:'Óþekkt lífvera',owned:false,rare:true,desc:'Enginn veit hvaðan hún er. Hún veit það líka ekki. Hún er ánægð.'},
 ];
-
+ 
 let activeStudentId = null;
 let activeAtt = null;
 let activeStickerStudentId = null;
@@ -533,7 +633,7 @@ let selectedStickerId = null;
 let veikurSent = false;
 let snackTimer = null;
 let openSkilabodId = null;
-
+ 
 const REPERTOIRE = [
   "Bach: Prelude C-dúr (BWV 846)",
   "Bach: Prelude D-moll (BWV 935)",
@@ -546,12 +646,12 @@ const REPERTOIRE = [
   "C-dúr skali — tvær áttundir",
   "G-dúr skali — ein áttund",
 ];
-
+ 
 let SKILABOD = [
   {id:1, fra:"María Jónsdóttir", barn:"Anna Björk", texti:"Gæti Anna farið aðeins snemma í dag, um 13:25? Við erum á leiðinni úr tannlækninum.", kl:"08:32", lesid:false},
   {id:2, fra:"Þór Gunnarsson", barn:"Gunnar Þór", texti:"Vildi spyrja hvort rétt er að æfa D-dúr eða D-moll þessa vikuna. Þekkjum bæði.", kl:"Í gær · 18:04", lesid:true},
 ];
-
+ 
 const TONLEIKAR_DATA = [
   {
     id:1, titill:"Vorleikur — Píanónemar", dags:"Þriðjudagur, 27. maí", timi:"19:00",
@@ -598,14 +698,14 @@ const TONLEIKAR_DATA = [
     skraningar:[]
   },
 ];
-
+ 
 // ── DATE ──────────────────────────────────────────────────────────
 const days = ['Sunnudagur','Mánudagur','Þriðjudagur','Miðvikudagur','Fimmtudagur','Föstudagur','Laugardagur'];
 const months = ['janúar','febrúar','mars','apríl','maí','júní','júlí','ágúst','september','október','nóvember','desember'];
 const now = new Date();
 const dateStr = days[now.getDay()]+', '+now.getDate()+'. '+months[now.getMonth()];
 document.getElementById('today-date').textContent = dateStr;
-
+ 
 // ── TAB SWITCHING ────────────────────────────────────────────────
 function setTab(tab){
   ['home','nemendur','tonleikar','skilabod','matur'].forEach(id => {
@@ -620,33 +720,33 @@ function setTab(tab){
   if(tab === 'matur') renderMatur();
   updateUnreadBadge();
 }
-
+ 
 // ── MATUR ────────────────────────────────────────────────────────
-
+ 
 // Reikna dagsetningar yfirstandandi viku
 function getWeekDates() {
   const now = new Date();
   const day = now.getDay(); // 0=sun, 1=mon...
   const hour = now.getHours();
-
+ 
   // Föstudagur eftir kl. 10 eða um helgi → sækja næstu viku
   const naestVika = (day === 5 && hour >= 10) || day === 6 || day === 0;
-
+ 
   const mon = new Date(now);
   const diffToMon = day === 0 ? -6 : 1 - day; // mánudagur þessarar viku
   mon.setDate(now.getDate() + diffToMon + (naestVika ? 7 : 0));
   mon.setHours(0,0,0,0);
-
+ 
   return Array.from({length:5}, (_,i) => {
     const d = new Date(mon);
     d.setDate(mon.getDate() + i);
     return d.toISOString().split('T')[0];
   });
 }
-
+ 
 const VIKUDAGAR = ['Mánudagur','Þriðjudagur','Miðvikudagur','Fimmtudagur','Föstudagur'];
 const VIKUDAGS = getWeekDates();
-
+ 
 const MATSEDILL = [
   { dagur:'Mánudagur',   dags:VIKUDAGS[0], A:'Ítalskar bollur með spaghetti, marinarasósu, grænmeti, parmesan og vínberjasalati', B:'Bakaður fiskur með kartöflum, hvítvínssósu, karrý blómkáli og fersku salati', C:'Kjúklingabringa með eðlusósu, hrísgrjónum, nachos, sýrðum rjóma og fersku salati', D:'Kjúklingasalat með bacon, eggi og hunangs sinnepssósu', E:'Asískt kjúklingasalat' },
   { dagur:'Þriðjudagur', dags:VIKUDAGS[1], A:'Kálfabrisket í BBQ með hvítlauks kartöflumús, heitri BBQsósu, grænmeti og fersku salati', B:'Lax með hunangs/soja dressingu, kókoshrísgrjónum, grænmeti, salati og engifer&lime mæjó', C:'Kjúklingalundir í sataysósu með hrísgrjónum, hnetum, grænmeti og fersku salati', D:'Kjúklingasalat með bacon, eggi og hunangs sinnepssósu', E:'Asískt kjúklingasalat' },
@@ -654,21 +754,21 @@ const MATSEDILL = [
   { dagur:'Fimmtudagur', dags:VIKUDAGS[3], A:'Purusteik með karamellu kartöflum, grænmeti, sósu, rauðkáli og ávaxtasalati', B:'Pönnusteikt keila með kartöflum, grænmeti, rjómapiparsósu og fersku salati', C:'Tikka masala kjúklingur með karrýgrjónum, mangó chutney, salati og naanbrauði', D:'Kjúklingasalat með bacon, eggi og hunangs sinnepssósu', E:'Asískt kjúklingasalat' },
   { dagur:'Föstudagur',  dags:VIKUDAGS[4], A:'Beikonborgari með káli, sósu, frönskum kartöflum og kokteilsósu', B:'Bakaður fiskur með bearnaisesósu, sveppum, lauk, kartöflum og fersku salati', C:'Kjúklingabringa með smælki, piparsósu, grænmeti og fersku salati', D:'Kjúklingasalat með bacon, eggi og hunangs sinnepssósu', E:'Asískt kjúklingasalat' },
 ];
-
+ 
 // Pantanir þessarar viku — í alvöru: sóttar úr MatPantanir í SharePoint
 const PANTANIR = Object.fromEntries(VIKUDAGS.map(d => [d, null]));
-
+ 
 function isCutoff(dags) {
   const now = new Date();
   const dagur = new Date(dags);
   dagur.setHours(10, 0, 0, 0);
   return now >= dagur;
 }
-
+ 
 function velaMat(dags, val) {
   PANTANIR[dags] = val === '' ? null : val;
 }
-
+ 
 function vistaMatPontun(dags) {
   if(isCutoff(dags)) { snack('Pöntunarfrestur liðinn — hafðu samband við Fanneyju'); return; }
   const val = PANTANIR[dags];
@@ -676,16 +776,16 @@ function vistaMatPontun(dags) {
   snack(val ? `✓ Pöntun vistuð — ${val}` : '✓ Pöntun afpöntuð');
   renderMatur();
 }
-
+ 
 function formatDags(dags) {
   const d = new Date(dags);
   return d.toLocaleDateString('is-IS', { day:'numeric', month:'long' });
 }
-
+ 
 function renderMatur() {
   const sc = document.getElementById('mat-list');
   if(!sc) return;
-
+ 
   const dagLitir = {
     'Mánudagur':   'rgba(56,189,248,0.08)',
     'Þriðjudagur': 'rgba(134,239,172,0.08)',
@@ -707,7 +807,7 @@ function renderMatur() {
     'Fimmtudagur': 'rgba(196,181,253,0.9)',
     'Föstudagur':  'rgba(249,168,212,0.9)',
   };
-
+ 
   const synilegar = MATSEDILL.filter(dag => !isCutoff(dag.dags));
   if(synilegar.length === 0) {
     sc.innerHTML = `<div style="text-align:center;padding:40px 24px;color:rgba(255,255,255,0.3)">
@@ -726,7 +826,7 @@ function renderMatur() {
     const brun = dagBrún[dag.dagur];
     const texti = dagTexti[dag.dagur];
     const dagsFmt = formatDags(dag.dags);
-
+ 
     // Frídagur — enginn matur
     if(fri) {
       return `<div style="background:rgba(255,255,255,0.02);border:1px dashed rgba(255,255,255,0.06);border-radius:18px;padding:14px 16px;margin:0 14px 12px;opacity:0.5">
@@ -739,11 +839,11 @@ function renderMatur() {
         </div>
       </div>`;
     }
-
+ 
     const options = valmoguleikar.map(k =>
       `<option value="${k}" ${pantad===k?'selected':''}>${k} — ${dag[k]}</option>`
     ).join('');
-
+ 
     return `<div style="background:${litur};border:1px solid ${lokad?'rgba(255,255,255,0.04)':brun};border-radius:18px;padding:14px 16px;margin:0 14px 12px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
         <div>
@@ -770,7 +870,7 @@ function renderMatur() {
     </div>`;
   }).join('');
 }
-
+ 
 // ── SNACK ────────────────────────────────────────────────────────
 function snack(msg){
   if(snackTimer) clearTimeout(snackTimer);
@@ -780,7 +880,7 @@ function snack(msg){
   document.getElementById('phone').appendChild(el);
   snackTimer = setTimeout(()=>el.remove(), 3000);
 }
-
+ 
 // ── VEIKINDI ─────────────────────────────────────────────────────
 function openVeikindi(){
   if(veikurSent){snack('Veikindatilkynning var þegar send ✓');return;}
@@ -804,13 +904,13 @@ function sendaVeikindi(){
   if(btn){ btn.style.background='rgba(34,197,94,0.1)'; btn.style.borderColor='rgba(34,197,94,0.3)'; btn.querySelector('.sick-txt').textContent='Tilkynning send ✓'; btn.querySelector('.sick-txt').style.color='rgba(134,239,172,0.8)'; btn.querySelector('span:first-child').textContent='✓'; }
   snack('Tilkynning send — skrifstofa og forráðamenn fengust við ✓');
 }
-
+ 
 // ── TÓNLEIKAR SCREEN ──────────────────────────────────────────────
 function renderTonleikar(){
   const list = document.getElementById('ton-list');
   const aflystir = TONLEIKAR_DATA.filter(t=>t.aflyst && t.skraningar.length > 0);
   let html = '';
-
+ 
   // In-app notification banner ef einhver tónleikar aflýstir
   if(aflystir.length > 0){
     html += `<div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-radius:16px;padding:12px 14px;margin-bottom:12px;display:flex;align-items:flex-start;gap:10px">
@@ -822,39 +922,39 @@ function renderTonleikar(){
       </div>
     </div>`;
   }
-
+ 
   // Opnir tónleikar
   const opnir = TONLEIKAR_DATA.filter(t=>!t.aflyst && t.skraningOpid);
   if(opnir.length > 0){
     html += `<p class="section-lbl">OPIÐ FYRIR SKRÁNINGU</p>`;
     opnir.forEach(t => { html += tonCard(t); });
   }
-
+ 
   // Lokaðir (ekki enn opnir)
   const lokad = TONLEIKAR_DATA.filter(t=>!t.aflyst && !t.skraningOpid);
   if(lokad.length > 0){
     html += `<p class="section-lbl" style="margin-top:12px">SKRÁNING EKKI OPIN ENNÞÁ</p>`;
     lokad.forEach(t => { html += tonCard(t); });
   }
-
+ 
   // Aflýstir
   if(aflystir.length > 0){
     html += `<p class="section-lbl" style="margin-top:12px">AFLÝST</p>`;
     aflystir.forEach(t => { html += tonCard(t); });
   }
-
+ 
   list.innerHTML = html;
 }
-
+ 
 function tonCard(t){
   const notad = t.skraningar.reduce((s,r)=>s+r.lengd,0);
   const pct = Math.min(100, Math.round(notad/t.lengdHamark*100));
   const full = !t.aflyst && t.skraningOpid && notad >= t.lengdHamark;
-
+ 
   let cardClass = 'ton-card';
   if(t.aflyst) cardClass += ' lokid';
   else if(t.skraningOpid) cardClass += ' opid';
-
+ 
   return `<div class="${cardClass}">
     <div class="ton-header">
       <div class="ton-icon">${t.aflyst ? '🚫' : '🎵'}</div>
@@ -895,7 +995,7 @@ function tonCard(t){
     }
   </div>`;
 }
-
+ 
 function openTonleikModal(tonId){
   const t = TONLEIKAR_DATA.find(x=>x.id===tonId);
   if(!t) return;
@@ -936,7 +1036,7 @@ function openTonleikModal(tonId){
   </div>`;
   document.getElementById('phone').appendChild(ov);
 }
-
+ 
 function onTonVerkSelect(val){
   const input = document.getElementById('ton-input-verk');
   const hofundur = document.getElementById('ton-input-hofundur');
@@ -952,7 +1052,7 @@ function onTonVerkSelect(val){
     input.style.display = 'none';
   }
 }
-
+ 
 function vistatonleikar(tonId){
   const t = TONLEIKAR_DATA.find(x=>x.id===tonId);
   const nafn = document.getElementById('ton-sel-nem')?.value;
@@ -990,7 +1090,7 @@ function renderNemendur(){
   html += `<div class="rep-more">+${REPERTOIRE.length-7} fleiri á lista</div></div>`;
   list.innerHTML = html;
 }
-
+ 
 // ── SKILABOÐ SCREEN ───────────────────────────────────────────────
 function updateUnreadBadge(){
   const n = SKILABOD.filter(s=>!s.lesid).length;
@@ -1042,7 +1142,7 @@ function sendaSkilabod(){
   document.getElementById('skil-modal')?.remove();
   snack('Svar sent sem tölvupóstur ✉');
 }
-
+ 
 // ── REPERTOIRE SELECT ─────────────────────────────────────────────
 function populateRepSelect(){
   const sel = document.getElementById('rep-select');
@@ -1057,14 +1157,14 @@ function onRepSelect(val){
   else if(val === '__custom') ta.value = '';
   if(val) ta.focus();
 }
-
+ 
 // ── RENDER ────────────────────────────────────────────────────────
 function render(){
   const done = STUDENTS.filter(s=>s.status).length;
   const left = STUDENTS.filter(s=>!s.status).length;
   document.getElementById('stat-done').textContent = done;
   document.getElementById('stat-left').textContent = left;
-
+ 
   const list = document.getElementById('student-list');
   list.innerHTML = STUDENTS.map(s => {
     const isDone = !!s.status;
@@ -1072,7 +1172,7 @@ function render(){
     const statusIcon = {present:'✓', late:'⏱', absent:'✗', forfoll:'⚠'}[s.status] || '';
     const statusCls = s.status || 'pending';
     const rareUnlocked = s.pracDays >= 5;
-
+ 
     let stickerSection = '';
     if(isDone && s.status !== 'absent' && s.status !== 'forfoll'){
       if(s.sticker === 'sent'){
@@ -1089,7 +1189,7 @@ function render(){
         </div>`;
       }
     }
-
+ 
     return `<div class="student-card ${isDone?'done':isNext?'next':''}" onclick="openAtt(${s.id})">
       <div class="sc-top">
         <span class="sc-time">${s.time}</span>
@@ -1105,7 +1205,7 @@ function render(){
     </div>`;
   }).join('');
 }
-
+ 
 // ── ATTENDANCE ────────────────────────────────────────────────────
 function openAtt(id){
   const s = STUDENTS.find(x=>x.id===id);
@@ -1120,11 +1220,11 @@ function openAtt(id){
   document.querySelectorAll('.att-btn').forEach(b=>b.classList.remove('sel'));
   showScreen('att-sheet');
 }
-
+ 
 function closeAtt(e){
   if(e.target.id==='att-sheet') showScreen('home');
 }
-
+ 
 function selectAtt(status){
   activeAtt = status;
   document.querySelectorAll('.att-btn').forEach(b=>b.classList.remove('sel'));
@@ -1136,7 +1236,7 @@ function selectAtt(status){
   btn.className = 'save-btn ready';
   btn.textContent = 'Vista mætingu';
 }
-
+ 
 function saveAtt(){
   if(!activeAtt) return;
   const s = STUDENTS.find(x=>x.id===activeStudentId);
@@ -1144,7 +1244,7 @@ function saveAtt(){
   render();
   showScreen('home');
 }
-
+ 
 // ── STICKER SHEET ─────────────────────────────────────────────────
 function openStickerSheet(id, e){
   e.stopPropagation();
@@ -1152,24 +1252,24 @@ function openStickerSheet(id, e){
   selectedStickerId = null;
   const s = STUDENTS.find(x=>x.id===id);
   const rareUnlocked = s.pracDays >= 5;
-
+ 
   document.getElementById('sp-student').textContent = s.name+' — límmiðaval';
   const rb = document.getElementById('sp-rare-banner');
   rb.style.display = rareUnlocked ? 'flex' : 'none';
   document.getElementById('sp-rare-txt').textContent = s.pracDays+' æfingadagar — rare límmiðinn er opinn!';
-
+ 
   renderStickerGrid(rareUnlocked);
   updateStickerConfirm();
   showScreen('sticker-sheet');
 }
-
+ 
 function closeStickerSheet(e){
   if(e.target.id==='sticker-sheet') showScreen('home');
 }
 function closeStickerX(){
   showScreen('home');
 }
-
+ 
 function renderStickerGrid(rareUnlocked){
   const grid = document.getElementById('sp-grid');
   grid.innerHTML = STICKERS.map(s => {
@@ -1190,7 +1290,7 @@ function renderStickerGrid(rareUnlocked){
     </div>`;
   }).join('');
 }
-
+ 
 function selectSticker(id){
   const s = STICKERS.find(x=>x.id===id);
   if(!s || s.owned) return;
@@ -1201,7 +1301,7 @@ function selectSticker(id){
   renderStickerGrid(rareUnlocked);
   updateStickerConfirm();
 }
-
+ 
 function updateStickerConfirm(){
   const btn = document.getElementById('sp-confirm');
   if(selectedStickerId){
@@ -1213,20 +1313,20 @@ function updateStickerConfirm(){
     btn.textContent = 'Veldu einn límmiða til að halda áfram';
   }
 }
-
+ 
 function confirmSticker(){
   if(!selectedStickerId) return;
   const s = STICKERS.find(x=>x.id===selectedStickerId);
   const student = STUDENTS.find(x=>x.id===activeStickerStudentId);
   s.owned = true;
   student.sticker = 'picked';
-
+ 
   // stamp screen
   document.getElementById('st-emoji').textContent = s.e;
   document.getElementById('st-name').textContent = s.name;
   document.getElementById('st-tag').textContent = 'GEIMFARAR'+(s.rare?' · RARE':'');
   document.getElementById('st-quote').textContent = '"'+s.desc+'"';
-
+ 
   // particles
   const pc = document.getElementById('stamp-particles');
   pc.innerHTML = '';
@@ -1243,7 +1343,7 @@ function confirmSticker(){
   se.style.animation='none';se.offsetHeight;se.style.animation='';
   showScreen('stamp-overlay');
 }
-
+ 
 function sendToParent(){
   const student = STUDENTS.find(x=>x.id===activeStickerStudentId);
   student.sticker = 'sent';
@@ -1260,21 +1360,20 @@ function sendToParent(){
   </div>`;
   document.getElementById('phone').appendChild(ov);
 }
-
+ 
 function closeStamp(){
   render();
   showScreen('home');
 }
-
+ 
 // ── SCREEN HELPER ─────────────────────────────────────────────────
 function showScreen(id){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
 }
-
-// init
-render();
-updateUnreadBadge();
+ 
+// init — keyrt af showApp() eftir innskráningu
+// render() og updateUnreadBadge() eru kallaðar þaðan
 </script>
 </body>
 </html>
