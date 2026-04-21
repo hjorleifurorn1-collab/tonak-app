@@ -605,6 +605,20 @@ async function graphGet(url) {
   return r.json();
 }
 
+async function graphPost(url, body) {
+  const token = await getAccessToken();
+  const r = await fetch(GRAPH_BASE + url, {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer ' + token,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(body)
+  });
+  if (!r.ok) throw new Error('Graph POST ' + r.status + ': ' + url);
+  return r.json();
+}
+
 async function getSiteId() {
   if (_siteId) return _siteId;
   const data = await graphGet('/sites/akureyri.sharepoint.com:/sites/tonak-Skolaumsysla');
@@ -620,7 +634,8 @@ async function getListItems(listName, filter) {
   return (data.value || []).map(item => ({ ...item.fields, _id: item.id }));
 }
 
-const WEEKDAYS_IS = ['Sunnudagur','Mánudagur','Þriðjudagur','Miðvikudagur','Fimmtudagur','Föstudagur','Laugardagur'];
+let _staffId = null;
+let _skolaarId = null;
 
 async function loadTeacherData() {
   const loadEl = document.getElementById('sp-loading');
@@ -638,8 +653,14 @@ async function loadTeacherData() {
 
     if (!staffRecord) {
       console.warn('TONAK: Staff record fannst ekki fyrir:', email);
-      return; // Nota gervigögn
+      return;
     }
+    _staffId = staffRecord._id;
+
+    // Sækja skólaár ID
+    const settings = await getListItems('Settings');
+    const activeSkolaAr = settings.find(s => s.Active === true);
+    if (activeSkolaAr) _skolaarId = activeSkolaAr._id;
 
     // 2. Finna RoomSlots kennara í dag — sækja alla og sía client-side
     const slots = await getListItems('RoomSlots');
@@ -690,7 +711,8 @@ async function loadTeacherData() {
         pracDays: 0,
         sticker: null,
         spScheduleId: sch._id,
-        spSlotId: slot?._id
+        spSlotId: slot?._id,
+        spStudentId: sch.StudentLookupId
       });
     });
 
@@ -1382,12 +1404,36 @@ function selectAtt(status){
   btn.textContent = 'Vista mætingu';
 }
 
-function saveAtt(){
+async function saveAtt(){
   if(!activeAtt) return;
   const s = STUDENTS.find(x=>x.id===activeStudentId);
   s.status = activeAtt;
   render();
   showScreen('home');
+
+  // Vista í AttendanceLog í SharePoint
+  const stadaMap = {present:'Mætti', late:'Seinn', absent:'Fjarverandi', forfoll:'Forföll tilkynnt'};
+  const athugasemd = document.getElementById('hw-input')?.value || '';
+  const today = new Date().toISOString();
+
+  try {
+    const siteId = await getSiteId();
+    const fields = {
+      Title: s.name + ' — ' + new Date().toLocaleDateString('is-IS'),
+      StudentId: Number(s.spStudentId),
+      TeacherId: Number(_staffId),
+      AttendanceDate: today,
+      Stada: stadaMap[activeAtt] || activeAtt,
+      Athugasemd: athugasemd,
+      SkradAf: 'Kennari'
+    };
+    if (_skolaarId) fields.SkolaarId = Number(_skolaarId);
+    await graphPost('/sites/' + siteId + '/lists/AttendanceLog/items', { fields });
+    snack('✓ Mæting vistuð í SharePoint');
+  } catch(e) {
+    console.error('TONAK: Mæting villa:', e);
+    snack('✓ Mæting skráð — net villa, reyndu aftur');
+  }
 }
 
 // ── STICKER SHEET ─────────────────────────────────────────────────
