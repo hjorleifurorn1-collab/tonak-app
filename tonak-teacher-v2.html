@@ -39,6 +39,11 @@ canvas#stars{position:absolute;inset:0;width:100%;height:100%;pointer-events:non
 .screen{position:absolute;inset:0;display:flex;flex-direction:column;opacity:0;pointer-events:none;transition:opacity .3s ease}
 .screen.active{opacity:1;pointer-events:all}
 
+/* ── SP LOADING ── */
+.sp-loading{position:absolute;inset:0;background:rgba(5,13,24,0.85);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:50;gap:14px}
+.sp-loading-spinner{width:32px;height:32px;border:3px solid rgba(56,189,248,0.2);border-top-color:var(--sky);border-radius:50%;animation:spin .7s linear infinite}
+.sp-loading-txt{font-size:12px;color:var(--text-dim)}
+
 /* ── LOGIN SCREEN ── */
 .login-screen{position:absolute;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 32px;z-index:100}
 .login-logo{font-family:'Baloo 2',sans-serif;font-size:32px;font-weight:800;color:var(--sky);letter-spacing:-0.5px;margin-bottom:6px}
@@ -319,6 +324,12 @@ canvas#stars{position:absolute;inset:0;width:100%;height:100%;pointer-events:non
   <div class="orb" style="width:140px;height:140px;bottom:140px;left:-40px;background:#0891b2;opacity:.07"></div>
   <div class="orb" style="width:100px;height:100px;top:200px;right:-20px;background:#22d3ee;opacity:.05"></div>
 
+  <!-- ── SP LOADING OVERLAY ── -->
+  <div class="sp-loading" id="sp-loading">
+    <div class="sp-loading-spinner"></div>
+    <div class="sp-loading-txt">Sæki dagskrá úr SharePoint…</div>
+  </div>
+
   <!-- ── LOGIN SCREEN ── -->
   <div class="login-screen" id="login-screen">
     <canvas id="stars-login" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none"></canvas>
@@ -520,7 +531,7 @@ const MSAL_CONFIG = {
   },
   cache: { cacheLocation: 'sessionStorage' }
 };
-const SCOPES = ['User.Read'];
+const SCOPES = ['User.Read', 'Sites.ReadWrite.All'];
 let msalApp = null;
 let currentUser = null;
 
@@ -572,13 +583,121 @@ async function getAccessToken() {
 
 function showApp() {
   document.getElementById('login-screen').style.display = 'none';
-  // Setja nafn kennara úr Microsoft reikningi
   const name = currentUser?.name || currentUser?.username || 'Kennari';
   document.querySelectorAll('.teacher-name').forEach(el => {
     if (el.textContent === 'Jón Sigurðsson') el.textContent = name;
   });
   render();
   updateUnreadBadge();
+  loadTeacherData();
+}
+
+// ── GRAPH API ─────────────────────────────────────────────────────
+const GRAPH_BASE = 'https://graph.microsoft.com/v1.0';
+let _siteId = null;
+
+async function graphGet(url) {
+  const token = await getAccessToken();
+  const r = await fetch(GRAPH_BASE + url, {
+    headers: { 'Authorization': 'Bearer ' + token }
+  });
+  if (!r.ok) throw new Error('Graph ' + r.status + ': ' + url);
+  return r.json();
+}
+
+async function getSiteId() {
+  if (_siteId) return _siteId;
+  const data = await graphGet('/sites/akureyri.sharepoint.com:/sites/tonak-Skolaumsysla');
+  _siteId = data.id;
+  return _siteId;
+}
+
+async function getListItems(listName, filter) {
+  const siteId = await getSiteId();
+  let url = '/sites/' + siteId + '/lists/' + encodeURIComponent(listName) + '/items?$expand=fields&$top=500';
+  if (filter) url += '&$filter=' + encodeURIComponent(filter);
+  const data = await graphGet(url);
+  return (data.value || []).map(item => ({ ...item.fields, _id: item.id }));
+}
+
+const WEEKDAYS_IS = ['Sunnudagur','Mánudagur','Þriðjudagur','Miðvikudagur','Fimmtudagur','Föstudagur','Laugardagur'];
+
+async function loadTeacherData() {
+  const loadEl = document.getElementById('sp-loading');
+  if (loadEl) loadEl.style.display = 'flex';
+  try {
+    const email = (currentUser.username || '').toLowerCase();
+    const todayWD = WEEKDAYS_IS[new Date().getDay()];
+
+    // 1. Finna Staff record kennara — sækja alla og finna eftir netfangi
+    const allStaff = await getListItems('Staff');
+    const staffRecord = allStaff.find(s => {
+      // Innra heiti dálks er Tolvupostfang (án íslenskra stafa)
+      const spEmail = (s.Tolvupostfang || '').toLowerCase();
+      return spEmail === email;
+    });
+
+    if (!staffRecord) {
+      console.warn('TONAK: Staff record fannst ekki fyrir:', email);
+      return; // Nota gervigögn
+    }
+
+    // 2. Finna RoomSlots kennara í dag
+    const slots = await getListItems('RoomSlots',
+      `fields/Weekday eq '${todayWD}'`
+    );
+    // Sía á viðkomandi kennara (Lookup field)
+    const mySlots = slots.filter(s =>
+      String(s.AssignedTeacherId) === String(staffRecord._id) ||
+      String(s.AssignedTeacherLookupValue) === String(staffRecord.Nafn)
+    );
+
+    if (mySlots.length === 0) {
+      console.log('TONAK: Engir tímar í dag fyrir þennan kennara.');
+      return;
+    }
+
+    // 3. Finna StudentSchedule færslur fyrir þessi slots
+    const allSchedule = await getListItems('StudentSchedule', 'fields/IsActive eq true');
+    const mySlotIds = mySlots.map(s => String(s._id));
+    const todaySchedule = allSchedule.filter(s =>
+      mySlotIds.includes(String(s.RoomSlotId))
+    );
+
+    if (todaySchedule.length === 0) {
+      console.log('TONAK: Engir nemendur skráðir á þessa tíma.');
+      return;
+    }
+
+    // 4. Uppfæra STUDENTS fylkið með raunverulegum gögnum
+    STUDENTS.length = 0;
+    todaySchedule.forEach(sch => {
+      const slot = mySlots.find(s => String(s._id) === String(sch.RoomSlotId));
+      STUDENTS.push({
+        id: Number(sch._id),
+        name: sch.StudentLookupValue || 'Nemandi',
+        subj: slot?.SubjectGroup || '',
+        level: sch.TeacherSubjectLookupValue || '',
+        time: slot?.StartTime || '',
+        room: slot?.RoomLookupValue || '',
+        status: null,
+        pracDays: 0,
+        sticker: null,
+        spScheduleId: sch._id,
+        spSlotId: slot?._id
+      });
+    });
+
+    // Raða eftir tíma
+    STUDENTS.sort((a, b) => a.time.localeCompare(b.time));
+    render();
+
+  } catch(e) {
+    console.error('TONAK SharePoint villa:', e);
+    // Nota gervigögn sem fallback — appið heldur áfram að virka
+  } finally {
+    if (loadEl) loadEl.style.display = 'none';
+  }
 }
 
 // Ræsa MSAL þegar allt er hlaðið
@@ -609,7 +728,7 @@ function drawStars(){
 drawStars();
 
 // ── STATE ────────────────────────────────────────────────────────
-const STUDENTS = [
+let STUDENTS = [
   {id:1, name:'Anna Björk', subj:'Píanó', level:'G-nám', time:'13:00', room:'Stofa 3', status:null, pracDays:5, sticker:null},
   {id:2, name:'Gunnar Þór', subj:'Gítar', level:'M-nám', time:'13:45', room:'Stofa 1', status:null, pracDays:3, sticker:null},
   {id:3, name:'Sigríður Hanna', subj:'Píanó', level:'G-nám', time:'14:30', room:'Stofa 3', status:'present', pracDays:6, sticker:'sent'},
