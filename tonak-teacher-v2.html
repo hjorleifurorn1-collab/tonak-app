@@ -361,7 +361,7 @@ canvas#stars{position:absolute;inset:0;width:100%;height:100%;pointer-events:non
     <div class="stats-row">
       <div class="stat-card"><div class="stat-num" id="stat-done">0</div><div class="stat-lbl">SKRÁÐ</div></div>
       <div class="stat-card"><div class="stat-num" id="stat-left">4</div><div class="stat-lbl">EFTIR</div></div>
-      <div class="stat-card"><div class="stat-num">4</div><div class="stat-lbl">ALLS Í DAG</div></div>
+      <div class="stat-card"><div class="stat-num" id="stat-total">4</div><div class="stat-lbl">ALLS Í DAG</div></div>
     </div>
 
     <div class="day-scroll">
@@ -665,10 +665,14 @@ async function loadTeacherData() {
       return;
     }
 
-    // 4. Sækja nöfn nemenda úr Students lista
+    // 4. Sækja nöfn nemenda og stofaheiti
     const allStudents = await getListItems('Students');
     const studentMap = {};
     allStudents.forEach(s => { studentMap[String(s._id)] = s.Nafn || s.Title || 'Nemandi'; });
+
+    const allRooms = await getListItems('Rooms');
+    const roomMap = {};
+    allRooms.forEach(r => { roomMap[String(r._id)] = r.Title || ''; });
 
     // 5. Uppfæra STUDENTS fylkið með raunverulegum gögnum
     STUDENTS.length = 0;
@@ -681,7 +685,7 @@ async function loadTeacherData() {
         subj: slot?.SubjectGroup || '',
         level: sch.TeacherSubjectLookupValue || '',
         time: slot?.StartTime || '',
-        room: slot?.RoomLookupId ? 'Stofa ' + slot.RoomLookupId : '',
+        room: roomMap[String(slot?.RoomLookupId)] || '',
         status: null,
         pracDays: 0,
         sticker: null,
@@ -1284,6 +1288,8 @@ function render(){
   const left = STUDENTS.filter(s=>!s.status).length;
   document.getElementById('stat-done').textContent = done;
   document.getElementById('stat-left').textContent = left;
+  const totalEl = document.getElementById('stat-total');
+  if (totalEl) totalEl.textContent = STUDENTS.length;
 
   const list = document.getElementById('student-list');
   list.innerHTML = STUDENTS.map(s => {
