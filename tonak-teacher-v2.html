@@ -612,11 +612,10 @@ async function getSiteId() {
   return _siteId;
 }
 
-async function getListItems(listName, filter, select) {
+async function getListItems(listName, filter) {
   const siteId = await getSiteId();
   let url = '/sites/' + siteId + '/lists/' + encodeURIComponent(listName) + '/items?$expand=fields&$top=500';
   if (filter) url += '&$filter=' + encodeURIComponent(filter);
-  if (select) url += '&$select=' + encodeURIComponent(select);
   const data = await graphGet(url);
   return (data.value || []).map(item => ({ ...item.fields, _id: item.id }));
 }
@@ -666,8 +665,8 @@ async function loadTeacherData() {
       return;
     }
 
-    // 4. Sækja nöfn nemenda úr Students lista — biðja sérstaklega um Nafn dálk
-    const allStudents = await getListItems('Students', null, 'fields/id,fields/Nafn,fields/Title');
+    // 4. Sækja nöfn nemenda úr Students lista
+    const allStudents = await getListItems('Students');
     const studentMap = {};
     allStudents.forEach(s => { studentMap[String(s._id)] = s.Nafn || s.Title || 'Nemandi'; });
 
