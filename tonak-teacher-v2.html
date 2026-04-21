@@ -521,11 +521,11 @@ const MSAL_CONFIG = {
   cache: { cacheLocation: 'sessionStorage' }
 };
 const SCOPES = ['User.Read'];
-const msalApp = new msal.PublicClientApplication(MSAL_CONFIG);
-
+let msalApp = null;
 let currentUser = null;
 
 async function msalInit() {
+  msalApp = new msal.PublicClientApplication(MSAL_CONFIG);
   await msalApp.initialize();
   // Handle redirect response (koma til baka eftir login)
   const resp = await msalApp.handleRedirectPromise();
