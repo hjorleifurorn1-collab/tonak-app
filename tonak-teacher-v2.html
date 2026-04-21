@@ -615,7 +615,11 @@ async function graphPost(url, body) {
     },
     body: JSON.stringify(body)
   });
-  if (!r.ok) throw new Error('Graph POST ' + r.status + ': ' + url);
+  if (!r.ok) {
+    const errBody = await r.json().catch(() => ({}));
+    console.error('Graph POST villa nánar:', JSON.stringify(errBody));
+    throw new Error('Graph POST ' + r.status + ': ' + url);
+  }
   return r.json();
 }
 
@@ -1423,14 +1427,9 @@ async function saveAtt(){
     const fields = {
       Title: s.name + ' — ' + new Date().toLocaleDateString('is-IS'),
       AttendanceDate: today,
-      Status: stadaMap[activeAtt] || activeAtt,
-      Notes: athugasemd,
-      MarkedBy: currentUser?.name || currentUser?.username || 'Kennari',
-      MarkedTimestamp: today
+      Status: stadaMap[activeAtt] || activeAtt
     };
-    // Lookup fields — aðeins bæta við ef gildi eru til
-    if (s.spStudentId) fields.StudentId = Number(s.spStudentId);
-    if (s.spScheduleId) fields.StudentScheduleId = Number(s.spScheduleId);
+    if (athugasemd) fields.Notes = athugasemd;
     await graphPost('/sites/' + siteId + '/lists/AttendanceLog/items', { fields });
     snack('✓ Mæting vistuð í SharePoint');
   } catch(e) {
