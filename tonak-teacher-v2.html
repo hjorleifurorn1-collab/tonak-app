@@ -1427,7 +1427,11 @@ async function saveAtt(){
     const fields = {
       Title: s.name + ' — ' + new Date().toLocaleDateString('is-IS'),
       AttendanceDate: today,
-      Status: stadaMap[activeAtt] || activeAtt
+      Status: stadaMap[activeAtt] || activeAtt,
+      StudentId: Number(s.spStudentId),
+      StudentScheduleId: Number(s.spScheduleId),
+      MarkedBy: currentUser?.name || currentUser?.username || '',
+      MarkedTimestamp: today
     };
     if (athugasemd) fields.Notes = athugasemd;
     await graphPost('/sites/' + siteId + '/lists/AttendanceLog/items', { fields });
