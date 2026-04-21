@@ -632,8 +632,7 @@ async function loadTeacherData() {
     // 1. Finna Staff record kennara — sækja alla og finna eftir netfangi
     const allStaff = await getListItems('Staff');
     const staffRecord = allStaff.find(s => {
-      // Innra heiti dálks er Tolvupostfang (án íslenskra stafa)
-      const spEmail = (s.Tolvupostfang || '').toLowerCase();
+      const spEmail = (s.T_x00f6_lvup_x00f3_stfang || '').toLowerCase();
       return spEmail === email;
     });
 
