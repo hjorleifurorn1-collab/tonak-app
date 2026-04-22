@@ -269,7 +269,7 @@ canvas#stars{position:absolute;inset:0;width:100%;height:100%;pointer-events:non
 .skil-modal-bg{position:absolute;inset:0;background:rgba(4,5,12,0.88);display:flex;align-items:flex-end;justify-content:center;z-index:80;animation:fdin .2s ease}
 .skil-modal{background:linear-gradient(180deg,#10172a 0%,#08090f 100%);border:1px solid rgba(56,189,248,0.15);border-radius:28px 28px 0 0;padding:20px 20px 36px;width:100%;max-height:85vh;overflow-y:auto}
 .skil-modal-handle{width:36px;height:4px;border-radius:2px;background:rgba(255,255,255,0.12);margin:0 auto 20px}
-.skil-modal-txt{background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);border-radius:14px;padding:14px 16px;margin-bottom:14px;font-size:15px;color:#ffffff !important;line-height:1.65;font-weight:500}
+.skil-modal-txt{background:#1e293b;border:1px solid #475569;border-radius:14px;padding:14px 16px;margin-bottom:14px;font-size:15px;color:#ffffff;line-height:1.65;font-weight:600}
 .skil-input{width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:12px 15px;color:#fff;font-size:14px;outline:none;resize:none;font-family:'Nunito',sans-serif;transition:border-color .2s}
 .skil-input:focus{border-color:rgba(56,189,248,0.35)}
 .skil-input::placeholder{color:rgba(255,255,255,0.25)}
@@ -1322,7 +1322,7 @@ function opnaSkilabod(id){
       <div><div style="font-size:15px;font-weight:700;color:#fff">${s.fra}</div><div style="font-size:11px;color:rgba(255,255,255,0.3);margin-top:2px">Varðar: ${s.barn} · ${s.kl}</div></div>
       <button onclick="document.getElementById('skil-modal').remove()" style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);border-radius:10px;width:32px;height:32px;color:rgba(255,255,255,0.4);font-size:15px;cursor:pointer">✕</button>
     </div>
-    <div class="skil-modal-txt" style="color:#ffffff;background:rgba(255,255,255,0.08)">${s.texti}</div>
+    <div class="skil-modal-txt">${s.texti}</div>
     <div style="font-size:11px;color:rgba(255,255,255,0.28);margin-bottom:7px">Svar — fer sem tölvupóstur til forráðamanns</div>
     <textarea class="skil-input" rows="3" id="skil-svar" placeholder="Svar þitt..."></textarea>
     <div style="font-size:10px;color:rgba(255,255,255,0.2);margin:7px 0 14px">Svar birtist einnig í forráðamannaappi</div>
