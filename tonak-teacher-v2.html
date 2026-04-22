@@ -605,10 +605,10 @@ async function graphGet(url) {
   return r.json();
 }
 
-async function graphPost(url, body) {
+async function graphPost(url, body, method='POST') {
   const token = await getAccessToken();
   const r = await fetch(GRAPH_BASE + url, {
-    method: 'POST',
+    method: method,
     headers: {
       'Authorization': 'Bearer ' + token,
       'Content-Type': 'application/json'
@@ -620,6 +620,7 @@ async function graphPost(url, body) {
     console.error('Graph POST villa nánar:', JSON.stringify(errBody));
     throw new Error('Graph POST ' + r.status + ': ' + url);
   }
+  if (r.status === 204) return {};
   return r.json();
 }
 
@@ -798,10 +799,7 @@ const REPERTOIRE = [
   "G-dúr skali — ein áttund",
 ];
 
-let SKILABOD = [
-  {id:1, fra:"María Jónsdóttir", barn:"Anna Björk", texti:"Gæti Anna farið aðeins snemma í dag, um 13:25? Við erum á leiðinni úr tannlækninum.", kl:"08:32", lesid:false},
-  {id:2, fra:"Þór Gunnarsson", barn:"Gunnar Þór", texti:"Vildi spyrja hvort rétt er að æfa D-dúr eða D-moll þessa vikuna. Þekkjum bæði.", kl:"Í gær · 18:04", lesid:true},
-];
+let SKILABOD_OLD_REMOVED = true; // Skilaboð eru sótt úr SharePoint
 
 const TONLEIKAR_DATA = [
   {
@@ -867,7 +865,7 @@ function setTab(tab){
   if(target) target.classList.add('active');
   if(tab === 'nemendur') renderNemendur();
   if(tab === 'tonleikar') renderTonleikar();
-  if(tab === 'skilabod') renderSkilabod();
+  if(tab === 'skilabod') { loadMessages(); }
   if(tab === 'matur') { loadMatseðill(); }
   updateUnreadBadge();
 }
@@ -1262,6 +1260,32 @@ function renderNemendur(){
 }
 
 // ── SKILABOÐ SCREEN ───────────────────────────────────────────────
+let SKILABOD = [];
+
+async function loadMessages() {
+  try {
+    const msgs = await getListItems('Messages');
+    // Sía á kennara og raða eftir tíma — nýjast fyrst
+    SKILABOD = msgs
+      .filter(m => String(m.ToTeacherLookupId) === String(_staffId))
+      .map(m => ({
+        id: m._id,
+        fra: m.From || m.Title || 'Forráðamaður',
+        barn: m.StudentLookupValue || '',
+        texti: m.Body || '',
+        kl: m.Created ? new Date(m.Created).toLocaleString('is-IS', {hour:'2-digit', minute:'2-digit', day:'numeric', month:'short'}) : '',
+        lesid: m.IsRead === true,
+        svar: m.TeacherReply || '',
+        spId: m._id
+      }))
+      .sort((a, b) => b.spId - a.spId);
+    renderSkilabod();
+    updateUnreadBadge();
+  } catch(e) {
+    console.error('TONAK Messages villa:', e);
+  }
+}
+
 function updateUnreadBadge(){
   const n = SKILABOD.filter(s=>!s.lesid).length;
   ['tab-skil-lbl','tab-skil-lbl2'].forEach(id=>{
@@ -1286,6 +1310,7 @@ function renderSkilabod(){
 function opnaSkilabod(id){
   const s = SKILABOD.find(x=>x.id===id);
   if(!s) return;
+  openSkilabodId = id;
   s.lesid = true;
   updateUnreadBadge();
   renderSkilabod();
@@ -1308,9 +1333,28 @@ function opnaSkilabod(id){
   </div>`;
   document.getElementById('phone').appendChild(ov);
 }
-function sendaSkilabod(){
+async function sendaSkilabod(){
+  const svar = document.getElementById('skil-svar')?.value?.trim();
+  const s = SKILABOD.find(x=>x.id===openSkilabodId);
+  if(!s) return;
   document.getElementById('skil-modal')?.remove();
-  snack('Svar sent sem tölvupóstur ✉');
+  try {
+    const siteId = await getSiteId();
+    const fields = { IsRead: true };
+    if (svar) {
+      fields.TeacherReply = svar;
+      fields.ReplyTimestamp = new Date().toISOString();
+    }
+    await graphPost('/sites/' + siteId + '/lists/Messages/items/' + s.spId + '/fields', fields, 'PATCH');
+    s.lesid = true;
+    s.svar = svar;
+    snack(svar ? 'Svar sent ✉' : 'Skilaboð merkt lesin ✓');
+    updateUnreadBadge();
+    renderSkilabod();
+  } catch(e) {
+    console.error('TONAK: Skilaboðavilla:', e);
+    snack('Villa við sendingu — reyndu aftur');
+  }
 }
 
 // ── REPERTOIRE SELECT ─────────────────────────────────────────────
