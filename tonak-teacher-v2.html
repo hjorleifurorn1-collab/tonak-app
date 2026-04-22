@@ -1272,7 +1272,7 @@ async function loadMessages() {
         id: m._id,
         fra: m.From || m.Title || 'Forráðamaður',
         barn: m.StudentLookupValue || '',
-        texti: m.Body || '',
+        texti: (() => { const d = document.createElement('div'); d.innerHTML = m.Body || ''; return d.textContent || d.innerText || ''; })(),
         kl: m.Created ? new Date(m.Created).toLocaleString('is-IS', {hour:'2-digit', minute:'2-digit', day:'numeric', month:'short'}) : '',
         lesid: m.IsRead === true,
         svar: m.TeacherReply || '',
