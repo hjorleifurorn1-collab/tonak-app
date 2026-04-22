@@ -258,18 +258,18 @@ canvas#stars{position:absolute;inset:0;width:100%;height:100%;pointer-events:non
 .skil-btn{width:100%;text-align:left;padding:14px;border-radius:18px;border:1px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.03);color:#fff;margin-bottom:8px;cursor:pointer;transition:all .2s;font-family:'Nunito',sans-serif}
 .skil-btn.unread{background:rgba(56,189,248,0.06);border-color:rgba(56,189,248,0.2)}
 .skil-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px}
-.skil-fra{font-size:13px;font-weight:700;color:rgba(255,255,255,0.7)}
+.skil-fra{font-size:13px;font-weight:700;color:rgba(255,255,255,0.9)}
 .skil-btn.unread .skil-fra{color:#7dd3fc}
-.skil-barn{font-size:10px;color:rgba(255,255,255,0.28);margin-top:1px}
+.skil-barn{font-size:10px;color:rgba(255,255,255,0.45);margin-top:1px}
 .skil-meta{display:flex;align-items:center;gap:6px}
 .skil-dot{width:7px;height:7px;border-radius:50%;background:#38bdf8;box-shadow:0 0 6px rgba(56,189,248,0.7)}
 .skil-kl{font-size:10px;color:rgba(255,255,255,0.22)}
-.skil-txt{font-size:12px;color:rgba(255,255,255,0.72);line-height:1.55}
+.skil-txt{font-size:13px;color:rgba(255,255,255,0.78);line-height:1.55}
 /* skilaboð modal */
 .skil-modal-bg{position:absolute;inset:0;background:rgba(4,5,12,0.88);display:flex;align-items:flex-end;justify-content:center;z-index:80;animation:fdin .2s ease}
 .skil-modal{background:linear-gradient(180deg,#10172a 0%,#08090f 100%);border:1px solid rgba(56,189,248,0.15);border-radius:28px 28px 0 0;padding:20px 20px 36px;width:100%;max-height:85vh;overflow-y:auto}
 .skil-modal-handle{width:36px;height:4px;border-radius:2px;background:rgba(255,255,255,0.12);margin:0 auto 20px}
-.skil-modal-txt{background:rgba(255,255,255,0.04);border-radius:14px;padding:14px 16px;margin-bottom:14px;font-size:14px;color:rgba(255,255,255,0.78);line-height:1.65}
+.skil-modal-txt{background:rgba(255,255,255,0.06);border-radius:14px;padding:14px 16px;margin-bottom:14px;font-size:15px;color:rgba(255,255,255,0.92);line-height:1.65}
 .skil-input{width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:12px 15px;color:#fff;font-size:14px;outline:none;resize:none;font-family:'Nunito',sans-serif;transition:border-color .2s}
 .skil-input:focus{border-color:rgba(56,189,248,0.35)}
 .skil-input::placeholder{color:rgba(255,255,255,0.25)}
@@ -699,7 +699,7 @@ async function loadTeacherData() {
 
     const allRooms = await getListItems('Rooms');
     const roomMap = {};
-    allRooms.forEach(r => { roomMap[String(r._id)] = r.Title || ''; });
+    allRooms.forEach(r => { roomMap[String(r._id)] = 'Stofa ' + (r.Title || ''); });
 
     // 5. Uppfæra STUDENTS fylkið með raunverulegum gögnum
     STUDENTS.length = 0;
@@ -1335,7 +1335,7 @@ function opnaSkilabod(id){
 }
 async function sendaSkilabod(){
   const svar = document.getElementById('skil-svar')?.value?.trim();
-  const s = SKILABOD.find(x=>x.id===openSkilabodId);
+  const s = SKILABOD.find(x=>String(x.id)===String(openSkilabodId));
   if(!s) return;
   document.getElementById('skil-modal')?.remove();
   try {
