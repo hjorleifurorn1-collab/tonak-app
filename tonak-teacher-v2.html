@@ -1308,7 +1308,7 @@ function renderSkilabod(){
   list.innerHTML = html;
 }
 function opnaSkilabod(id){
-  const s = SKILABOD.find(x=>x.id===id);
+  const s = SKILABOD.find(x=>String(x.id)===String(id));
   if(!s) return;
   openSkilabodId = id;
   s.lesid = true;
