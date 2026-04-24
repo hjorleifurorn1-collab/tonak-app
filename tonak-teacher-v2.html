@@ -817,7 +817,12 @@ async function loadTonleikar() {
         return {
           id: t._id,
           titill: t.Title || '',
-          dags: t.Dagsetning ? new Date(t.Dagsetning).toLocaleDateString('is-IS', {weekday:'long', day:'numeric', month:'long', year:'numeric'}) : '',
+          dags: t.Dagsetning ? (() => {
+          const d = new Date(t.Dagsetning);
+          const vikudagar = ['Sunnudagur','Mánudagur','Þriðjudagur','Miðvikudagur','Fimmtudagur','Föstudagur','Laugardagur'];
+          const manudagar = ['janúar','febrúar','mars','apríl','maí','júní','júlí','ágúst','september','október','nóvember','desember'];
+          return vikudagar[d.getUTCDay()] + ', ' + d.getUTCDate() + '. ' + manudagar[d.getUTCMonth()] + ' ' + d.getUTCFullYear();
+        })() : '',
           timi: t.Timi || '',
           stadur: t.Stadur || '',
           lengdHamark: t.LengdHamark || 40,
@@ -1220,8 +1225,9 @@ function onTonVerkSelect(val){
     hofundur.value = '';
   } else if(val) {
     input.style.display = 'none';
-    // Auto-fill höfundur úr verknafni (fyrsta orðið)
-    hofundur.value = val.split(':')[0].trim();
+    // Auto-fill höfundur — skipta á : eða - hvort sem kemur fyrst
+    const sep = val.includes(':') ? ':' : val.includes(' - ') ? ' - ' : null;
+    hofundur.value = sep ? val.split(sep)[0].trim() : '';
   } else {
     input.style.display = 'none';
   }
