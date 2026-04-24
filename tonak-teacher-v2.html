@@ -828,7 +828,7 @@ async function loadTonleikar() {
             nafn: s.NemandLookupValue || s.Title || '',
             verk: s.Verk || '',
             hofundur: s.Hofundur || '',
-            lengd: s.LengdVerks || 0,
+            lengd: s.Lengd || 0,
             spId: s._id
           }))
         };
@@ -1250,7 +1250,7 @@ async function vistatonleikar(tonId){
       KennariLookupId: Number(_staffId),
       Verk: verk,
       Hofundur: hofundur || '',
-      LengdVerks: lengd
+      Lengd: lengd
     };
     if (nemId) fields.NemandLookupId = Number(nemId);
     if (_skolaarId) fields.SkolaarLookupId = Number(_skolaarId);
