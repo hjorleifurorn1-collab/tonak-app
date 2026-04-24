@@ -1261,7 +1261,8 @@ function onTonVerkSelect(val){
 async function vistatonleikar(tonId){
   const t = TONLEIKAR_DATA.find(x=>String(x.id)===String(tonId));
   const nafn = document.getElementById('ton-sel-nem')?.value;
-  const nemId = document.getElementById('ton-sel-nem')?.selectedOptions[0]?.dataset?.id;
+  const nemStudent = ALL_MY_STUDENTS.find(s => s.nafn === nafn) || STUDENTS.find(s => s.name === nafn);
+  const nemId = nemStudent?.spStudentId;
   const verkSel = document.getElementById('ton-sel-verk')?.value;
   const verkInput = document.getElementById('ton-input-verk')?.value;
   const verk = verkSel === '__custom' ? verkInput : verkSel;
