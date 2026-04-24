@@ -1178,11 +1178,12 @@ function tonCard(t){
     ${t.skraningar.length > 0 ? `
     <div class="ton-nemendur">
       <p class="section-lbl" style="margin-bottom:6px">SKRÁÐIR NEMENDUR</p>
-      ${t.skraningar.map(s=>`
+      ${t.skraningar.map((s,i)=>`
         <div class="ton-nem-item">
           <span class="ton-nem-name">${s.nafn}</span>
           <span class="ton-nem-verk">${s.verk}</span>
           <span style="font-size:10px;color:var(--text-dimmer);flex-shrink:0;margin-left:6px">${s.lengd} mín</span>
+          ${t.skraningOpid && !t.aflyst ? `<button onclick="afskraNemanda('${t.id}',${i},event)" style="background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.25);border-radius:8px;padding:2px 8px;font-size:10px;color:rgba(239,68,68,0.7);cursor:pointer;margin-left:6px;flex-shrink:0">Afskrá</button>` : ''}
         </div>`).join('')}
     </div>` : ''}
     ${t.aflyst ? '' : !t.skraningOpid
@@ -1198,6 +1199,31 @@ function tonCard(t){
         : `<button class="ton-skra-btn" onclick="openTonleikModal(${t.id})">+ Skrá nemanda á tónleika</button>`
     }
   </div>`;
+}
+
+async function afskraNemanda(tonId, idx, e) {
+  e.stopPropagation();
+  const t = TONLEIKAR_DATA.find(x => String(x.id) === String(tonId));
+  if (!t) return;
+  const s = t.skraningar[idx];
+  if (!s) return;
+  if (!confirm(`Afskrá ${s.nafn} af ${t.titill}?`)) return;
+  try {
+    if (s.spId) {
+      const siteId = await getSiteId();
+      const token = await getAccessToken();
+      await fetch(`${GRAPH_BASE}/sites/${siteId}/lists/TonleikalistarLog/items/${s.spId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+    }
+    t.skraningar.splice(idx, 1);
+    renderTonleikar();
+    snack(`${s.nafn} afskráð/afskráður ✓`);
+  } catch(e) {
+    console.error('TONAK: Afskráning villa:', e);
+    snack('Villa við afskráningu — reyndu aftur');
+  }
 }
 
 function openTonleikModal(tonId){
