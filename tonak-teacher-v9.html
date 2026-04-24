@@ -1313,8 +1313,8 @@ async function vistatonleikar(tonId){
     if (nemId) fields.NemandiLookupId = Number(nemId);
     if (_skolaarId) fields.SkolaarLookupId = Number(_skolaarId);
     if (t.id) fields.TonleikarLookupId = Number(t.id);
-    await graphPost('/sites/' + siteId + '/lists/TonleikalistarLog/items', { fields });
-    t.skraningar.push({nafn, verk, hofundur: hofundur||'', lengd});
+    const result = await graphPost('/sites/' + siteId + '/lists/TonleikalistarLog/items', { fields });
+    t.skraningar.push({nafn, verk, hofundur: hofundur||'', lengd, spId: result?.id});
     renderTonleikar();
     snack(`${nafn} skráð/skráður á ${t.titill} ✓`);
   } catch(e) {
