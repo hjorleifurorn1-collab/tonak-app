@@ -1580,7 +1580,7 @@ async function saveAtt(){
         if (_staffId) hwFields.TeacherLookupId = Number(_staffId);
         if (_skolaarId) hwFields.SkolaarLookupId = Number(_skolaarId);
         if (s.spScheduleId) hwFields.TimaRefLookupId = Number(s.spScheduleId);
-        await graphPost('/sites/' + siteId + '/lists/Heimanam/items', { hwFields });
+        await graphPost('/sites/' + siteId + '/lists/Heimanam/items', { fields: hwFields });
       } catch(e) {
         console.error('TONAK: Heimanam villa:', e);
       }
