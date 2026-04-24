@@ -1284,7 +1284,7 @@ async function vistatonleikar(tonId){
       Hofundur: hofundur || '',
       Lengd: lengd
     };
-    if (nemId) fields.NemandLookupId = Number(nemId);
+    if (nemId) fields.NemandiLookupId = Number(nemId);
     if (_skolaarId) fields.SkolaarLookupId = Number(_skolaarId);
     if (t.id) fields.TonleikarLookupId = Number(t.id);
     await graphPost('/sites/' + siteId + '/lists/TonleikalistarLog/items', { fields });
