@@ -816,8 +816,8 @@ async function loadTonleikar() {
         return {
           id: t._id,
           titill: t.Title || '',
-          dags: t.Dagsetning ? new Date(t.Dagsetning).toLocaleDateString('is-IS', {weekday:'long', day:'numeric', month:'long'}) : '',
-          timi: t.Dagsetning ? new Date(t.Dagsetning).toLocaleTimeString('is-IS', {hour:'2-digit', minute:'2-digit'}) : '',
+          dags: t.Dagsetning ? new Date(t.Dagsetning).toLocaleDateString('is-IS', {weekday:'long', day:'numeric', month:'long', year:'numeric'}) : '',
+          timi: '',
           stadur: t.Stadur || '',
           lengdHamark: t.LengdHamark || 40,
           aflyst: t.Aflyst === true,
@@ -1170,7 +1170,7 @@ function tonCard(t){
 }
 
 function openTonleikModal(tonId){
-  const t = TONLEIKAR_DATA.find(x=>x.id===tonId);
+  const t = TONLEIKAR_DATA.find(x=>String(x.id)===String(tonId));
   if(!t) return;
   const notad = t.skraningar.reduce((s,r)=>s+r.lengd,0);
   const eftir = t.lengdHamark - notad;
