@@ -590,6 +590,7 @@ function showApp() {
   render();
   updateUnreadBadge();
   loadTeacherData();
+  loadRepertoire(); // Sækja repertoire strax við innskráningu
 }
 
 // ── GRAPH API ─────────────────────────────────────────────────────
@@ -817,7 +818,7 @@ async function loadTonleikar() {
           id: t._id,
           titill: t.Title || '',
           dags: t.Dagsetning ? new Date(t.Dagsetning).toLocaleDateString('is-IS', {weekday:'long', day:'numeric', month:'long', year:'numeric'}) : '',
-          timi: '',
+          timi: t.Timi || '',
           stadur: t.Stadur || '',
           lengdHamark: t.LengdHamark || 40,
           aflyst: t.Aflyst === true,
