@@ -1254,7 +1254,7 @@ async function vistatonleikar(tonId){
     };
     if (nemId) fields.NemandLookupId = Number(nemId);
     if (_skolaarId) fields.SkolaarLookupId = Number(_skolaarId);
-    if (t.id) fields.TonleikalistarLookupId = Number(t.id);
+    if (t.id) fields.TonleikarLookupId = Number(t.id);
     await graphPost('/sites/' + siteId + '/lists/TonleikalistarLog/items', { fields });
     t.skraningar.push({nafn, verk, hofundur: hofundur||'', lengd});
     renderTonleikar();
