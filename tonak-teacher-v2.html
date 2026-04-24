@@ -786,67 +786,58 @@ let veikurSent = false;
 let snackTimer = null;
 let openSkilabodId = null;
 
-const REPERTOIRE = [
-  "Bach: Prelude C-dúr (BWV 846)",
-  "Bach: Prelude D-moll (BWV 935)",
-  "Bach: Minuet G-dúr (Anna Magdalena)",
-  "Beethoven: Fúr Elíse",
-  "Clementi: Sonatina Op. 36 nr. 1",
-  "Bartók: Microcosmos nr. 33",
-  "Mozart: Minuet G-dúr (KV 1)",
-  "Hanon: Nr. 1 — Upphlaupsæfing",
-  "C-dúr skali — tvær áttundir",
-  "G-dúr skali — ein áttund",
-];
+let REPERTOIRE = [];
 
 let SKILABOD_OLD_REMOVED = true; // Skilaboð eru sótt úr SharePoint
 
-const TONLEIKAR_DATA = [
-  {
-    id:1, titill:"Vorleikur — Píanónemar", dags:"Þriðjudagur, 27. maí", timi:"19:00",
-    stadur:"Aðalsalur", lengdHamark:40, aflyst:false,
-    skraningOpid:true, skraningOpnarDags:"8. maí",
-    skraningar:[
-      {nafn:"Anna Björk", verk:"Bach: Minuet G-dúr", hofundur:"Bach", lengd:3},
-      {nafn:"Sigríður Hanna", verk:"Beethoven: Fúr Elíse", hofundur:"Beethoven", lengd:4},
-      {nafn:"Björn Leó", verk:"Clementi: Sonatina Op.36", hofundur:"Clementi", lengd:4},
-    ]
-  },
-  {
-    id:2, titill:"Lokatónleikar skólans", dags:"Föstudagur, 6. júní", timi:"16:00",
-    stadur:"Menningarhúsið", lengdHamark:40, aflyst:false,
-    skraningOpid:true, skraningOpnarDags:"16. maí",
-    skraningar:[
-      {nafn:"Anna Björk", verk:"Clementi: Sonatina Op.36 nr.1", hofundur:"Clementi", lengd:5},
-    ]
-  },
-  {
-    id:3, titill:"Hljómsveitartónleikar", dags:"Miðvikudagur, 12. mars", timi:"18:00",
-    stadur:"Aðalsalur", lengdHamark:60, aflyst:true,
-    skraningOpid:false, skraningOpnarDags:"19. febrúar",
-    skraningar:[
-      {nafn:"Gunnar Þór", verk:"Beethoven: Ode to Joy", hofundur:"Beethoven", lengd:5},
-    ]
-  },
-  {
-    id:4, titill:"Vorleikur — Strengjanemar", dags:"Miðvikudagur, 28. maí", timi:"17:00",
-    stadur:"Aðalsalur", lengdHamark:40, aflyst:false,
-    skraningOpid:false, skraningOpnarDags:"7. maí",
-    skraningar:[]
-  },
-  {
-    id:5, titill:"Jólaleikur", dags:"Fimmtudagur, 11. desember", timi:"17:00",
-    stadur:"Menningarhúsið", lengdHamark:60, aflyst:false,
-    skraningOpid:false, skraningOpnarDags:"20. nóvember",
-    skraningar:[]
-  },
-  {
-    id:6, titill:"Haustleikur", dags:"Föstudagur, 17. október", timi:"18:00",
-    stadur:"Aðalsalur", lengdHamark:50, aflyst:false,
-    skraningOpid:false, skraningOpnarDags:"26. september",
-    skraningar:[]
-  },
-];
+let TONLEIKAR_DATA = [];
+
+async function loadRepertoire() {
+  try {
+    const items = await getListItems('RepertoireListi');
+    const myRep = items.filter(r => String(r.TeacherLookupId) === String(_staffId) && r.Virkur !== false);
+    REPERTOIRE = myRep.map(r => r.Title || '');
+  } catch(e) {
+    console.error('TONAK Repertoire villa:', e);
+    REPERTOIRE = ['Bach: Prelude C-dúr', 'Beethoven: Fúr Elíse', 'Clementi: Sonatina Op.36'];
+  }
+}
+
+async function loadTonleikar() {
+  try {
+    const items = await getListItems('Tonleikar');
+    const skraningar = await getListItems('TonleikalistarLog');
+
+    TONLEIKAR_DATA = items
+      .filter(t => t.Virkur !== false)
+      .map(t => {
+        const mineTon = skraningar.filter(s => String(s.TonleikalistarLookupId || s.TonleikalistarId) === String(t._id) ||
+          String(s.TonleikarLookupId) === String(t._id));
+        return {
+          id: t._id,
+          titill: t.Title || '',
+          dags: t.Dagsetning ? new Date(t.Dagsetning).toLocaleDateString('is-IS', {weekday:'long', day:'numeric', month:'long'}) : '',
+          timi: t.Dagsetning ? new Date(t.Dagsetning).toLocaleTimeString('is-IS', {hour:'2-digit', minute:'2-digit'}) : '',
+          stadur: t.Stadur || '',
+          lengdHamark: t.LengdHamark || 40,
+          aflyst: t.Aflyst === true,
+          skraningOpid: t.SkraningOpid === true,
+          skraningOpnarDags: '',
+          skraningar: mineTon.map(s => ({
+            nafn: s.NemandLookupValue || s.Title || '',
+            verk: s.Verk || '',
+            hofundur: s.Hofundur || '',
+            lengd: s.LengdVerks || 0,
+            spId: s._id
+          }))
+        };
+      })
+      .sort((a, b) => new Date(a.dags) - new Date(b.dags));
+    renderTonleikar();
+  } catch(e) {
+    console.error('TONAK Tónleikar villa:', e);
+  }
+}
 
 // ── DATE ──────────────────────────────────────────────────────────
 const days = ['Sunnudagur','Mánudagur','Þriðjudagur','Miðvikudagur','Fimmtudagur','Föstudagur','Laugardagur'];
@@ -863,8 +854,8 @@ function setTab(tab){
   });
   const target = document.getElementById(tab);
   if(target) target.classList.add('active');
-  if(tab === 'nemendur') renderNemendur();
-  if(tab === 'tonleikar') renderTonleikar();
+  if(tab === 'nemendur') { loadRepertoire().then(() => renderNemendur()); }
+  if(tab === 'tonleikar') { loadTonleikar(); }
   if(tab === 'skilabod') { loadMessages(); }
   if(tab === 'matur') { loadMatseðill(); }
   updateUnreadBadge();
@@ -1065,12 +1056,26 @@ function openVeikindi(){
   </div>`;
   document.getElementById('phone').appendChild(ov);
 }
-function sendaVeikindi(){
+async function sendaVeikindi(){
   veikurSent = true;
   document.getElementById('veikur-modal')?.remove();
   const btn = document.querySelector('.sick-btn');
   if(btn){ btn.style.background='rgba(34,197,94,0.1)'; btn.style.borderColor='rgba(34,197,94,0.3)'; btn.querySelector('.sick-txt').textContent='Tilkynning send ✓'; btn.querySelector('.sick-txt').style.color='rgba(134,239,172,0.8)'; btn.querySelector('span:first-child').textContent='✓'; }
   snack('Tilkynning send — skrifstofa og forráðamenn fengust við ✓');
+  try {
+    await fetch('https://defaultfce2332bf493407ea472f173f9a0af.ea.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/d9576649d12f4f6c9fd43604e58a1669/triggers/manual/paths/invoke?api-version=1', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        kennari: currentUser?.name || '',
+        netfang: currentUser?.username || '',
+        staffId: _staffId,
+        dagsetning: new Date().toISOString()
+      })
+    });
+  } catch(e) {
+    console.error('TONAK: Veikindi flow villa:', e);
+  }
 }
 
 // ── TÓNLEIKAR SCREEN ──────────────────────────────────────────────
@@ -1184,7 +1189,7 @@ function openTonleikModal(tonId){
     <p class="ton-field-lbl">NEMANDI</p>
     <select class="ton-nem-select" id="ton-sel-nem">
       <option value="">— Velja nemanda —</option>
-      ${STUDENTS.map(s=>`<option value="${s.name}">${s.name} — ${s.subj}</option>`).join('')}
+      ${STUDENTS.map(s=>`<option value="${s.name}" data-id="${s.spStudentId||''}">${s.name} — ${s.subj||s.level}</option>`).join('')}
     </select>
     <p class="ton-field-lbl">VERK</p>
     <select class="ton-nem-select" id="ton-sel-verk" onchange="onTonVerkSelect(this.value)">
@@ -1221,9 +1226,10 @@ function onTonVerkSelect(val){
   }
 }
 
-function vistatonleikar(tonId){
-  const t = TONLEIKAR_DATA.find(x=>x.id===tonId);
+async function vistatonleikar(tonId){
+  const t = TONLEIKAR_DATA.find(x=>String(x.id)===String(tonId));
   const nafn = document.getElementById('ton-sel-nem')?.value;
+  const nemId = document.getElementById('ton-sel-nem')?.selectedOptions[0]?.dataset?.id;
   const verkSel = document.getElementById('ton-sel-verk')?.value;
   const verkInput = document.getElementById('ton-input-verk')?.value;
   const verk = verkSel === '__custom' ? verkInput : verkSel;
@@ -1232,10 +1238,32 @@ function vistatonleikar(tonId){
   if(!nafn || !verk || !lengd){ snack('Vantar upplýsingar — fylltu inn alla reiti'); return; }
   const notad = t.skraningar.reduce((s,r)=>s+r.lengd,0);
   if(notad + lengd > t.lengdHamark){ snack(`Of langt — aðeins ${t.lengdHamark - notad} mín eftir`); return; }
-  t.skraningar.push({nafn, verk, hofundur: hofundur||'', lengd});
+
   document.getElementById('ton-modal')?.remove();
-  renderTonleikar();
-  snack(`${nafn} skráð/skráður á ${t.titill} ✓`);
+  snack('Vista skráningu...');
+
+  try {
+    const siteId = await getSiteId();
+    const fields = {
+      Title: nafn + ' — ' + t.titill,
+      KennariLookupId: Number(_staffId),
+      Verk: verk,
+      Hofundur: hofundur || '',
+      LengdVerks: lengd
+    };
+    if (nemId) fields.NemandLookupId = Number(nemId);
+    if (_skolaarId) fields.SkolaarLookupId = Number(_skolaarId);
+    if (t.id) fields.TonleikalistarLookupId = Number(t.id);
+    await graphPost('/sites/' + siteId + '/lists/TonleikalistarLog/items', { fields });
+    t.skraningar.push({nafn, verk, hofundur: hofundur||'', lengd});
+    renderTonleikar();
+    snack(`${nafn} skráð/skráður á ${t.titill} ✓`);
+  } catch(e) {
+    console.error('TONAK: Tónleikaskráning villa:', e);
+    t.skraningar.push({nafn, verk, hofundur: hofundur||'', lengd});
+    renderTonleikar();
+    snack(`${nafn} skráð/skráður (net villa — gæti þurft að endurtaka)`);
+  }
 }
 function renderNemendur(){
   const list = document.getElementById('nem-list');
@@ -1479,6 +1507,25 @@ async function saveAtt(){
     if (athugasemd) fields.Notes = athugasemd;
     await graphPost('/sites/' + siteId + '/lists/AttendanceLog/items', { fields });
     snack('✓ Mæting vistuð í SharePoint');
+
+    // Vista heimaverkefni/athugasemd í Heimanam ef til staðar
+    if (athugasemd && (activeAtt === 'present' || activeAtt === 'late')) {
+      try {
+        const hwFields = {
+          Title: s.name + ' — ' + new Date().toLocaleDateString('is-IS'),
+          Leidbeiningar: athugasemd,
+          UthlutadDagsetning: today,
+          VikuUpphaf: VIKUDAGS[0]
+        };
+        if (s.spStudentId) hwFields.StudentLookupId = Number(s.spStudentId);
+        if (_staffId) hwFields.TeacherLookupId = Number(_staffId);
+        if (_skolaarId) hwFields.SkolaarLookupId = Number(_skolaarId);
+        if (s.spScheduleId) hwFields.TimaRefLookupId = Number(s.spScheduleId);
+        await graphPost('/sites/' + siteId + '/lists/Heimanam/items', { hwFields });
+      } catch(e) {
+        console.error('TONAK: Heimanam villa:', e);
+      }
+    }
   } catch(e) {
     console.error('TONAK: Mæting villa:', e);
     snack('✓ Mæting skráð — net villa, reyndu aftur');
