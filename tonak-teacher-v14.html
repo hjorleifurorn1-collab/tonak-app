@@ -719,7 +719,8 @@ async function loadTeacherData() {
         sticker: null,
         spScheduleId: sch._id,
         spSlotId: slot?._id,
-        spStudentId: sch.StudentLookupId
+        spStudentId: sch.StudentLookupId,
+        spSchoolYearId: sch.SchoolYearLookupId
       });
     });
 
@@ -851,6 +852,7 @@ async function loadTonleikar() {
         })() : '',
           stadur: t.Stadur || '',
           lengdHamark: t.LengdHamark || 40,
+          skolaarId: t.SkolaarLookupId,
           aflyst: t.Aflyst === true,
           skraningOpid: t.SkraningOpid === true,
           skraningOpnarDags: '',
@@ -1311,7 +1313,7 @@ async function vistatonleikar(tonId){
       Lengd: lengd
     };
     if (nemId) fields.NemandiLookupId = Number(nemId);
-    if (_skolaarId) fields.SkolaarLookupId = Number(_skolaarId);
+    if (t.skolaarId) fields.SkolaarLookupId = Number(t.skolaarId);
     if (t.id) fields.TonleikarLookupId = Number(t.id);
     const result = await graphPost('/sites/' + siteId + '/lists/TonleikalistarLog/items', { fields });
     t.skraningar.push({nafn, verk, hofundur: hofundur||'', lengd, spId: result?.id});
@@ -1578,7 +1580,7 @@ async function saveAtt(){
         };
         if (s.spStudentId) hwFields.StudentLookupId = Number(s.spStudentId);
         if (_staffId) hwFields.TeacherLookupId = Number(_staffId);
-        if (_skolaarId) hwFields.SkolaarLookupId = Number(_skolaarId);
+        if (s.spSchoolYearId) hwFields.SkolaarLookupId = Number(s.spSchoolYearId);
         if (s.spScheduleId) hwFields.TimaRefLookupId = Number(s.spScheduleId);
         await graphPost('/sites/' + siteId + '/lists/Heimanam/items', { fields: hwFields });
       } catch(e) {
