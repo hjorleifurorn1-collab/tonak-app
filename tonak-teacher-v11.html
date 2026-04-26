@@ -696,7 +696,7 @@ async function loadTeacherData() {
     // 4. Sækja nöfn nemenda og stofaheiti
     const allStudents = await getListItems('Students');
     const studentMap = {};
-    allStudents.forEach(s => { studentMap[String(s._id)] = s.Nafn || s.Title || 'Nemandi'; });
+    allStudents.forEach(s => { studentMap[String(s._id)] = s.Title || 'Nemandi'; });
 
     const allRooms = await getListItems('Rooms');
     const roomMap = {};
@@ -849,7 +849,7 @@ async function loadTonleikar() {
           const manudagar = ['janúar','febrúar','mars','apríl','maí','júní','júlí','ágúst','september','október','nóvember','desember'];
           return vikudagar[d.getUTCDay()] + ', ' + d.getUTCDate() + '. ' + manudagar[d.getUTCMonth()] + ' ' + d.getUTCFullYear();
         })() : '',
-          timi: t.Timi || '',          stadur: t.Stadur || '',
+          stadur: t.Stadur || '',
           lengdHamark: t.LengdHamark || 40,
           aflyst: t.Aflyst === true,
           skraningOpid: t.SkraningOpid === true,
@@ -858,7 +858,7 @@ async function loadTonleikar() {
             nafn: s.NemandLookupValue || s.Nemandi || (s.Title ? s.Title.split(' — ')[0] : '') || '',
             verk: s.Verk || '',
             hofundur: s.Hofundur || '',
-            lengd: s.Lengd || 0,
+            lengd: s.LengdVerks || 0,
             spId: s._id
           }))
         };
@@ -1164,7 +1164,7 @@ function tonCard(t){
       <div class="ton-icon">${t.aflyst ? '🚫' : '🎵'}</div>
       <div style="flex:1">
         <div class="ton-titill">${t.titill}${t.aflyst ? ' <span style="font-size:10px;color:rgba(252,165,165,0.7);background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.2);border-radius:6px;padding:1px 6px;margin-left:4px">AFLÝST</span>' : ''}</div>
-        <div class="ton-meta">${t.dags}${t.timi ? ' · kl. ' + t.timi : ''} · ${t.stadur}</div>
+        <div class="ton-meta">${t.dags} · ${t.stadur}</div>
       </div>
     </div>
     ${t.skraningOpid && !t.aflyst ? `
@@ -1308,7 +1308,7 @@ async function vistatonleikar(tonId){
       KennariLookupId: Number(_staffId),
       Verk: verk,
       Hofundur: hofundur || '',
-      Lengd: lengd
+      LengdVerks: lengd
     };
     if (nemId) fields.NemandiLookupId = Number(nemId);
     if (_skolaarId) fields.SkolaarLookupId = Number(_skolaarId);
