@@ -1559,35 +1559,35 @@ async function shouldAwardSticker(siteId, studentId) {
   const monday = new Date(now);
   monday.setDate(now.getDate() - daysToMonday);
   monday.setHours(0, 0, 0, 0);
-  const mondayISO = monday.toISOString();
+  const mondayMs = monday.getTime();
+  const studentIdNum = Number(studentId);
 
-  console.log('TONAK STICKER: athuga', {studentId, mondayISO});
+  console.log('TONAK STICKER: athuga', {studentId, monday: monday.toISOString()});
 
   try {
-    // Athuga hvort nemandi hefur þegar pending í AttendanceLog þessa viku
-    const attUrl = '/sites/' + siteId + '/lists/AttendanceLog/items'
-      + '?$expand=fields&$top=10'
-      + '&$filter=fields/StudentLookupId eq ' + Number(studentId)
-      + ' and fields/AttendanceDate ge \'' + mondayISO + '\''
-      + ' and fields/PendingStickerAward eq 1';
-    console.log('TONAK STICKER: AttendanceLog filter', attUrl);
-    const attRes = await graphGet(attUrl);
-    console.log('TONAK STICKER: AttendanceLog niðurstaða', attRes);
-    if (attRes && attRes.value && attRes.value.length > 0) {
-      console.log('TONAK STICKER: nemandi hefur þegar pending — skip');
+    // Sækja allar AttendanceLog færslur og filtra client-side
+    // (SharePoint $filter á Lookup dálkum virkar ekki áreiðanlega)
+    const allAtt = await getListItems('AttendanceLog');
+    const pendingThisWeek = allAtt.find(a => {
+      if (Number(a.StudentLookupId) !== studentIdNum) return false;
+      if (a.PendingStickerAward !== true) return false;
+      const ad = a.AttendanceDate ? new Date(a.AttendanceDate).getTime() : 0;
+      return ad >= mondayMs;
+    });
+    if (pendingThisWeek) {
+      console.log('TONAK STICKER: nemandi hefur þegar pending — skip', pendingThisWeek);
       return false;
     }
 
-    // Athuga hvort nemandi hefur þegar fengið sticker þessa viku
-    const colUrl = '/sites/' + siteId + '/lists/StickerCollection/items'
-      + '?$expand=fields&$top=10'
-      + '&$filter=fields/StudentLookupId eq ' + Number(studentId)
-      + ' and fields/EarnedDate ge \'' + mondayISO + '\'';
-    console.log('TONAK STICKER: StickerCollection filter', colUrl);
-    const colRes = await graphGet(colUrl);
-    console.log('TONAK STICKER: StickerCollection niðurstaða', colRes);
-    if (colRes && colRes.value && colRes.value.length > 0) {
-      console.log('TONAK STICKER: nemandi hefur þegar fengið — skip');
+    // Sækja allar StickerCollection færslur og filtra client-side
+    const allCol = await getListItems('StickerCollection');
+    const earnedThisWeek = allCol.find(c => {
+      if (Number(c.StudentLookupId) !== studentIdNum) return false;
+      const ed = c.EarnedDate ? new Date(c.EarnedDate).getTime() : 0;
+      return ed >= mondayMs;
+    });
+    if (earnedThisWeek) {
+      console.log('TONAK STICKER: nemandi hefur þegar fengið — skip', earnedThisWeek);
       return false;
     }
 
