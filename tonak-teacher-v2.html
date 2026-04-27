@@ -1542,6 +1542,51 @@ function selectAtt(status){
   btn.textContent = 'Vista mætingu';
 }
 
+// ── STICKER PENDING LOGIC ─────────────────────────────────────────
+// Ákvarðar hvort nemandi á að fá límmiða-pending fyrir þessa viku.
+// Vika byrjar á mánudegi. Ef nemandi hefur þegar pending eða valið
+// límmiða þessa viku → ekki flagga aftur.
+async function shouldAwardSticker(siteId, studentId) {
+  if (!studentId) return false;
+
+  // Reikna mánudag þessarar viku (00:00 ISO)
+  const now = new Date();
+  const dayOfWeek = now.getDay(); // 0=sun, 1=mán, ..., 6=lau
+  const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - daysToMonday);
+  monday.setHours(0, 0, 0, 0);
+  const mondayISO = monday.toISOString();
+
+  try {
+    // Athuga hvort nemandi hefur þegar pending í AttendanceLog þessa viku
+    const attUrl = '/sites/' + siteId + '/lists/AttendanceLog/items'
+      + '?$expand=fields&$top=10'
+      + '&$filter=fields/StudentLookupId eq ' + Number(studentId)
+      + ' and fields/AttendanceDate ge \'' + mondayISO + '\''
+      + ' and fields/PendingStickerAward eq 1';
+    const attRes = await graphGet(attUrl);
+    if (attRes && attRes.value && attRes.value.length > 0) {
+      return false; // Hefur þegar pending
+    }
+
+    // Athuga hvort nemandi hefur þegar fengið sticker þessa viku
+    const colUrl = '/sites/' + siteId + '/lists/StickerCollection/items'
+      + '?$expand=fields&$top=10'
+      + '&$filter=fields/StudentLookupId eq ' + Number(studentId)
+      + ' and fields/EarnedDate ge \'' + mondayISO + '\'';
+    const colRes = await graphGet(colUrl);
+    if (colRes && colRes.value && colRes.value.length > 0) {
+      return false; // Hefur þegar valið sticker
+    }
+
+    return true; // Hvorki pending né valið — flagga
+  } catch(e) {
+    console.error('TONAK: shouldAwardSticker villa:', e);
+    return false; // Við villu, ekki flagga (öruggt val)
+  }
+}
+
 async function saveAtt(){
   if(!activeAtt) return;
   const s = STUDENTS.find(x=>x.id===activeStudentId);
@@ -1556,6 +1601,14 @@ async function saveAtt(){
 
   try {
     const siteId = await getSiteId();
+
+    // Athuga hvort nemandi á að fá límmiðapending fyrir þessa viku
+    // Aðeins ef mætti/seinn (ekki fjarverandi eða forföll)
+    let shouldFlagPending = false;
+    if (activeAtt === 'present' || activeAtt === 'late') {
+      shouldFlagPending = await shouldAwardSticker(siteId, s.spStudentId);
+    }
+
     const fields = {
       Title: s.name + ' — ' + new Date().toLocaleDateString('is-IS'),
       AttendanceDate: today,
@@ -1566,8 +1619,9 @@ async function saveAtt(){
       MarkedTimestamp: today
     };
     if (athugasemd) fields.Notes = athugasemd;
+    if (shouldFlagPending) fields.PendingStickerAward = true;
     await graphPost('/sites/' + siteId + '/lists/AttendanceLog/items', { fields });
-    snack('✓ Mæting vistuð í SharePoint');
+    snack(shouldFlagPending ? '✓ Mæting vistuð — límmiði bíður' : '✓ Mæting vistuð í SharePoint');
 
     // Vista heimaverkefni/athugasemd í Heimanam ef til staðar
     if (athugasemd && (activeAtt === 'present' || activeAtt === 'late')) {
