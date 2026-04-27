@@ -1547,7 +1547,10 @@ function selectAtt(status){
 // Vika byrjar á mánudegi. Ef nemandi hefur þegar pending eða valið
 // límmiða þessa viku → ekki flagga aftur.
 async function shouldAwardSticker(siteId, studentId) {
-  if (!studentId) return false;
+  if (!studentId) {
+    console.log('TONAK STICKER: studentId vantar', {studentId});
+    return false;
+  }
 
   // Reikna mánudag þessarar viku (00:00 ISO)
   const now = new Date();
@@ -1558,6 +1561,8 @@ async function shouldAwardSticker(siteId, studentId) {
   monday.setHours(0, 0, 0, 0);
   const mondayISO = monday.toISOString();
 
+  console.log('TONAK STICKER: athuga', {studentId, mondayISO});
+
   try {
     // Athuga hvort nemandi hefur þegar pending í AttendanceLog þessa viku
     const attUrl = '/sites/' + siteId + '/lists/AttendanceLog/items'
@@ -1565,9 +1570,12 @@ async function shouldAwardSticker(siteId, studentId) {
       + '&$filter=fields/StudentLookupId eq ' + Number(studentId)
       + ' and fields/AttendanceDate ge \'' + mondayISO + '\''
       + ' and fields/PendingStickerAward eq 1';
+    console.log('TONAK STICKER: AttendanceLog filter', attUrl);
     const attRes = await graphGet(attUrl);
+    console.log('TONAK STICKER: AttendanceLog niðurstaða', attRes);
     if (attRes && attRes.value && attRes.value.length > 0) {
-      return false; // Hefur þegar pending
+      console.log('TONAK STICKER: nemandi hefur þegar pending — skip');
+      return false;
     }
 
     // Athuga hvort nemandi hefur þegar fengið sticker þessa viku
@@ -1575,15 +1583,19 @@ async function shouldAwardSticker(siteId, studentId) {
       + '?$expand=fields&$top=10'
       + '&$filter=fields/StudentLookupId eq ' + Number(studentId)
       + ' and fields/EarnedDate ge \'' + mondayISO + '\'';
+    console.log('TONAK STICKER: StickerCollection filter', colUrl);
     const colRes = await graphGet(colUrl);
+    console.log('TONAK STICKER: StickerCollection niðurstaða', colRes);
     if (colRes && colRes.value && colRes.value.length > 0) {
-      return false; // Hefur þegar valið sticker
+      console.log('TONAK STICKER: nemandi hefur þegar fengið — skip');
+      return false;
     }
 
-    return true; // Hvorki pending né valið — flagga
+    console.log('TONAK STICKER: flagga pending = TRUE');
+    return true;
   } catch(e) {
-    console.error('TONAK: shouldAwardSticker villa:', e);
-    return false; // Við villu, ekki flagga (öruggt val)
+    console.error('TONAK STICKER: villa', e);
+    return false;
   }
 }
 
