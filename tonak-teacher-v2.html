@@ -848,6 +848,40 @@ async function loadStickerCatalog() {
   }
 }
 
+// ── STUDENT COLLECTION ─────────────────────────────────────────────
+// Sækir öll límmiða nemanda úr StickerCollection og merkir owned=true
+// á viðeigandi STICKERS færslur. Kallað í openStickerSheet áður en grid
+// er teiknað. SharePoint $filter á Lookup virkar ekki áreiðanlega — þess
+// vegna sækjum við allt og filtrum client-side.
+async function loadStudentCollection(studentId) {
+  // Reset: hreinsa owned á öllum STICKERS áður en við merkjum nýjan nemanda
+  STICKERS.forEach(s => { s.owned = false; });
+
+  if (!studentId) {
+    console.warn('TONAK StickerCollection: studentId vantar — skip');
+    return;
+  }
+
+  try {
+    const allCol = await getListItems('StickerCollection');
+    const studentCol = allCol.filter(c => String(c.StudentLookupId) === String(studentId));
+
+    let ownedCount = 0;
+    studentCol.forEach(c => {
+      const s = STICKERS.find(x => x.id === c.StickerId);
+      if (s) {
+        s.owned = true;
+        ownedCount++;
+      }
+    });
+
+    console.log('TONAK StickerCollection: nemandi', studentId, 'á', ownedCount, 'af', STICKERS.length, 'límmiðum');
+  } catch(e) {
+    console.error('TONAK StickerCollection villa:', e);
+    // Halda áfram með owned=false á öllum — appið virkar áfram
+  }
+}
+
 let ALL_MY_STUDENTS = []; // Allir nemendur kennara — fyrir tónleikaskráningu
 
 async function loadAllMyStudents() {
@@ -1703,7 +1737,7 @@ async function saveAtt(){
 }
 
 // ── STICKER SHEET ─────────────────────────────────────────────────
-function openStickerSheet(id, e){
+async function openStickerSheet(id, e){
   e.stopPropagation();
   activeStickerStudentId = id;
   selectedStickerId = null;
@@ -1715,9 +1749,14 @@ function openStickerSheet(id, e){
   rb.style.display = rareUnlocked ? 'flex' : 'none';
   document.getElementById('sp-rare-txt').textContent = s.pracDays+' æfingadagar — rare límmiðinn er opinn!';
 
+  // Sýna sheet strax með núverandi gögnum — síðan sækja collection og endurteiknað
   renderStickerGrid(rareUnlocked);
   updateStickerConfirm();
   showScreen('sticker-sheet');
+
+  // Sækja owned status úr SharePoint og endurteiknað grid
+  await loadStudentCollection(s.spStudentId);
+  renderStickerGrid(rareUnlocked);
 }
 
 function closeStickerSheet(e){
