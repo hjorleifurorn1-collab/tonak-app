@@ -154,7 +154,7 @@ canvas#stars{position:absolute;inset:0;width:100%;height:100%;pointer-events:non
 .spill.off{background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.07);color:rgba(255,255,255,0.22)}
 .sp-scroll{max-height:220px;overflow-y:auto;padding:8px 0 0}
 .sp-scroll::-webkit-scrollbar{display:none}
-.sp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:10px}
+.sp-grid{display:flex;flex-direction:column;gap:14px;margin-bottom:10px}
 
 .pcell{aspect-ratio:1;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;position:relative;transition:all .25s cubic-bezier(.34,1.4,.64,1);cursor:default;user-select:none}
 .pcell.avail{background:rgba(180,180,200,0.05);border:1.5px solid rgba(180,180,200,0.12);cursor:pointer}
@@ -487,11 +487,6 @@ canvas#stars{position:absolute;inset:0;width:100%;height:100%;pointer-events:non
       <div class="rare-banner" id="sp-rare-banner" style="display:none">
         <span style="font-size:13px">✦</span>
         <span class="rub" id="sp-rare-txt">5+ dagar — rare límmiðinn er opinn!</span>
-      </div>
-      <div class="serie-row">
-        <div class="spill">✦ Geimfarar</div>
-        <div class="spill off">🌊 Djúphaf 🔒</div>
-        <div class="spill off">♩ Janus 🔒</div>
       </div>
       <div class="sp-scroll">
         <div class="sp-grid" id="sp-grid"></div>
@@ -1768,23 +1763,86 @@ function closeStickerX(){
 
 function renderStickerGrid(rareUnlocked){
   const grid = document.getElementById('sp-grid');
-  grid.innerHTML = STICKERS.map(s => {
+
+  // Pilot árið: aðeins G-stigs + Öll-stigs límmiðar (M og F koma seinna)
+  const pilotStickers = STICKERS.filter(s =>
+    !s.namsstig || s.namsstig === 'G' || s.namsstig === 'Öll'
+  );
+
+  if (pilotStickers.length === 0) {
+    grid.innerHTML = '<p style="text-align:center;color:rgba(255,255,255,0.4);padding:24px;font-size:12px">Engir límmiðar í boði</p>';
+    return;
+  }
+
+  // Flokka eftir seríu — bevara röð úr StickerCatalog (sortOrder)
+  const serieMap = {};
+  const serieOrder = [];
+  pilotStickers.forEach(s => {
+    const key = s.serie || 'Aðrir';
+    if (!serieMap[key]) {
+      serieMap[key] = [];
+      serieOrder.push(key);
+    }
+    serieMap[key].push(s);
+  });
+
+  // Cell template — sami CSS og áður (.pcell, .pc-emoji, .pc-name, .rare-lock-overlay)
+  const cellHtml = (s) => {
     const rareLocked = s.rare && !rareUnlocked && !s.owned;
-    const rareAvail = s.rare && rareUnlocked && !s.owned;
     const isSel = selectedStickerId === s.id;
     let cls = 'pcell';
-    if(s.owned) cls += ' owned';
-    else if(rareLocked) cls += ' rare-lock';
-    else if(s.rare) cls += isSel ? ' rare-sel' : ' rare-avail';
+    if (s.owned) cls += ' owned';
+    else if (rareLocked) cls += ' rare-lock';
+    else if (s.rare) cls += isSel ? ' rare-sel' : ' rare-avail';
     else cls += isSel ? ' sel' : ' avail';
+
     return `<div class="${cls}" onclick="selectSticker('${s.id}')">
       ${s.rare && !s.owned && !rareLocked ? '<div class="pc-rare-pip">RARE</div>' : ''}
       ${s.owned ? '<div class="pc-tick">✓</div>' : ''}
-      <span class="pc-emoji" style="${(s.owned||isSel||rareAvail)?'':'filter:grayscale(1) brightness(0.5)'}">${s.e}</span>
+      <span class="pc-emoji">${s.e}</span>
       <span class="pc-name">${s.owned ? s.name : isSel ? s.name : '???'}</span>
       ${rareLocked ? '<div class="rare-lock-overlay"><span class="rl-icon">🔒</span><span class="rl-txt">5+ dagar</span></div>' : ''}
     </div>`;
-  }).join('');
+  };
+
+  const emptyCell = '<div></div>';
+
+  // Per seríu: haus + 3+3+1 layout (6 common í tveim röðum, rare í miðju þriðju röð)
+  const serieBlocks = serieOrder.map(serieName => {
+    const ss = serieMap[serieName];
+    const common = ss.filter(s => !s.rare);
+    const rare = ss.find(s => s.rare);
+    const ownedCount = ss.filter(s => s.owned).length;
+
+    let html = '<div>';
+
+    // Sería-haus
+    html += `<div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px">
+      <span style="font-family:'Baloo 2',sans-serif;font-size:12px;font-weight:800;color:rgba(255,255,255,0.5);letter-spacing:.5px;text-transform:uppercase">${serieName}</span>
+      <span style="font-size:10px;color:rgba(255,255,255,0.25);margin-left:auto">${ownedCount}/${ss.length}</span>
+    </div>`;
+
+    // Röð 1: common 0-2
+    html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:9px">';
+    for (let i = 0; i < 3; i++) html += common[i] ? cellHtml(common[i]) : emptyCell;
+    html += '</div>';
+
+    // Röð 2: common 3-5
+    html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:9px">';
+    for (let i = 3; i < 6; i++) html += common[i] ? cellHtml(common[i]) : emptyCell;
+    html += '</div>';
+
+    // Röð 3: rare í miðju
+    html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:9px">';
+    html += emptyCell + (rare ? cellHtml(rare) : emptyCell) + emptyCell;
+    html += '</div>';
+
+    html += '</div>';
+    return html;
+  });
+
+  // Aðskilnaðarlína á milli sería
+  grid.innerHTML = serieBlocks.join('<div style="height:1px;background:rgba(255,255,255,0.06);margin:4px 0"></div>');
 }
 
 function selectSticker(id){
