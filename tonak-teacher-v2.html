@@ -591,6 +591,7 @@ function showApp() {
   updateUnreadBadge();
   loadTeacherData();
   loadRepertoire(); // Sækja repertoire strax við innskráningu
+  loadStickerCatalog(); // Sækja límmiðakatalóg strax við innskráningu
 }
 
 // ── GRAPH API ─────────────────────────────────────────────────────
@@ -771,7 +772,9 @@ let STUDENTS = [
   {id:4, name:'Björn Leó', subj:'Trommur', level:'G-nám', time:'15:15', room:'Stofa 5', status:null, pracDays:2, sticker:null},
 ];
 
-const STICKERS = [
+// STICKERS er fyllt frá SharePoint StickerCatalog í loadStickerCatalog() eftir login.
+// Þessi hardkóða er fallback ef SharePoint ekki nær — appið virkar áfram.
+let STICKERS = [
   {id:'s1',e:'🚀',name:'Geimskip',owned:true,rare:false,desc:'Flyður í stjörnurnar — hraðar en nokkuð annað'},
   {id:'s2',e:'🌙',name:'Tunglið',owned:true,rare:false,desc:'Alltaf hér, alltaf kyr'},
   {id:'s3',e:'⭐',name:'Stjarna',owned:false,rare:false,desc:'Glóir í myrkrinu þegar öll önnur ljós hafa slokknað'},
@@ -802,6 +805,46 @@ async function loadRepertoire() {
   } catch(e) {
     console.error('TONAK Repertoire villa:', e);
     REPERTOIRE = ['Bach: Prelude C-dúr', 'Beethoven: Fúr Elíse', 'Clementi: Sonatina Op.36'];
+  }
+}
+
+// ── STICKER CATALOG ────────────────────────────────────────────────
+// Sækir StickerCatalog úr SharePoint og fyllir STICKERS-fylkið.
+// Active-merki sía fram virka límmiða · SortOrder ræður röð.
+// Ef SharePoint klikkar þá heldur hardkóða-fallbackið appið á lífi.
+async function loadStickerCatalog() {
+  try {
+    const items = await getListItems('StickerCatalog');
+    const active = items
+      .filter(s => s.Active === true || s.Active === 'true' || s.Active === 1)
+      .sort((a, b) => (Number(a.SortOrder) || 0) - (Number(b.SortOrder) || 0));
+
+    if (active.length === 0) {
+      console.warn('TONAK StickerCatalog: tómur listi — held fallback gögnum');
+      return;
+    }
+
+    STICKERS.length = 0;
+    active.forEach(item => {
+      STICKERS.push({
+        id: item.StickerId,
+        name: item.Title || '',
+        e: item.EmojiPlaceholder || '✦',
+        rare: (item.Tier === 'Rare'),
+        desc: item.Description || '',
+        serie: item.Serie || '',
+        namsstig: item.Namsstig || '',
+        pngUrl: item.PngUrl || '',
+        lockedPngUrl: item.LockedPngUrl || '',
+        sortOrder: Number(item.SortOrder) || 0,
+        owned: false  // Verður uppfært per nemanda þegar StickerCollection er sótt
+      });
+    });
+
+    console.log('TONAK StickerCatalog: hlaðið —', STICKERS.length, 'límmiðar');
+  } catch(e) {
+    console.error('TONAK StickerCatalog villa:', e);
+    // Fallback gögn halda — appið virkar áfram
   }
 }
 
