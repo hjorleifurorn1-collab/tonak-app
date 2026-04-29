@@ -176,8 +176,20 @@ canvas#stars{position:absolute;inset:0;width:100%;height:100%;pointer-events:non
 .pcell.rare-lock .pc-emoji{filter:grayscale(1) brightness(0.35) sepia(0.3)}
 .pcell.owned .pc-emoji{filter:none;opacity:.75}
 .pcell.sel .pc-emoji,.pcell.rare-sel .pc-emoji,.pcell.rare-avail .pc-emoji{filter:none}
-.pcell.sel .pc-emoji,.pcell.rare-sel .pc-emoji{transform:scale(1.12)}
-.pcell.sel .pc-img,.pcell.rare-sel .pc-img{transform:scale(1.12)}
+.pcell.sel .pc-emoji,.pcell.rare-sel .pc-emoji{transform:scale(1.05)}
+.pcell.sel .pc-img,.pcell.rare-sel .pc-img{transform:scale(1.05)}
+
+/* Selected silhouette: aura glóir, silhouette helst — full litur kemur fyrst í stamp animation */
+@keyframes auraPulse{
+  0%,100%{box-shadow:0 0 0 1px rgba(167,139,250,0.5), 0 0 18px rgba(252,211,77,0.35), inset 0 0 24px rgba(252,211,77,0.12)}
+  50%{box-shadow:0 0 0 1px rgba(167,139,250,0.8), 0 0 32px rgba(252,211,77,0.6), inset 0 0 32px rgba(252,211,77,0.22)}
+}
+@keyframes auraPulseRare{
+  0%,100%{box-shadow:0 0 0 1px rgba(125,211,252,0.6), 0 0 22px rgba(167,139,250,0.45), inset 0 0 26px rgba(125,211,252,0.15)}
+  50%{box-shadow:0 0 0 1px rgba(125,211,252,1), 0 0 38px rgba(167,139,250,0.75), inset 0 0 36px rgba(125,211,252,0.25)}
+}
+.pcell.sel{animation:auraPulse 1.6s ease-in-out infinite}
+.pcell.rare-sel{animation:auraPulseRare 1.6s ease-in-out infinite}
 .pc-name{font-size:8.5px;font-weight:700;text-align:center;line-height:1.2;padding:0 3px;transition:color .3s}
 .pcell.avail .pc-name{color:rgba(180,180,200,0.24)}
 .pcell.rare-lock .pc-name{color:rgba(180,140,40,0.5)}
@@ -1917,6 +1929,8 @@ function renderStickerGrid(rareUnlocked){
 
   // Cell template — sami CSS og áður (.pcell, .pc-name, .rare-lock-overlay)
   // Notar PNG ef tilbúin (s.imgFull / s.imgLocked), annars emoji fallback.
+  // Mikilvæg regla: full litur birtist AÐEINS fyrir owned. Selected helst silhouette
+  // með auraPulse animation — full litur er verðlaun sem birtist í stamp-animation.
   const cellHtml = (s) => {
     const rareLocked = s.rare && !rareUnlocked && !s.owned;
     const isSel = selectedStickerId === s.id;
@@ -1926,9 +1940,8 @@ function renderStickerGrid(rareUnlocked){
     else if (s.rare) cls += isSel ? ' rare-sel' : ' rare-avail';
     else cls += isSel ? ' sel' : ' avail';
 
-    // Velja mynd: full mynd ef owned eða selected, annars silhouette
-    const showFull = s.owned || isSel;
-    const imgUrl = showFull ? s.imgFull : s.imgLocked;
+    // Aðeins owned sér full mynd. Allir aðrir (selected, available, locked) sjá silhouette.
+    const imgUrl = s.owned ? s.imgFull : s.imgLocked;
     const imgOrEmoji = imgUrl
       ? `<img class="pc-img" src="${imgUrl}" alt="${s.name}">`
       : `<span class="pc-emoji">${s.e}</span>`;
@@ -2012,10 +2025,15 @@ function confirmSticker(){
   s.owned = true;
   student.sticker = 'picked';
 
-  // stamp screen
-  document.getElementById('st-emoji').textContent = s.e;
+  // Stamp screen: PNG ef til, annars emoji fallback
+  const stEmoji = document.getElementById('st-emoji');
+  if (s.imgFull) {
+    stEmoji.innerHTML = `<img src="${s.imgFull}" alt="${s.name}" style="width:140px;height:140px;object-fit:contain">`;
+  } else {
+    stEmoji.textContent = s.e;
+  }
   document.getElementById('st-name').textContent = s.name;
-  document.getElementById('st-tag').textContent = 'GEIMFARAR'+(s.rare?' · RARE':'');
+  document.getElementById('st-tag').textContent = (s.serie || '').toUpperCase()+(s.rare?' · RARE':'');
   document.getElementById('st-quote').textContent = '"'+s.desc+'"';
 
   // particles
