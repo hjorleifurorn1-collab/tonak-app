@@ -901,9 +901,70 @@ async function loadStickerCatalog() {
     });
 
     console.log('TONAK StickerCatalog: hlaðið —', STICKERS.length, 'límmiðar');
+
+    // Sækja sticker myndir í bakgrunni (engin await — login bíður ekki)
+    loadStickerImages();
   } catch(e) {
     console.error('TONAK StickerCatalog villa:', e);
     // Fallback gögn halda — appið virkar áfram
+  }
+}
+
+// ── STICKER IMAGES (bakgrunnshleðsla) ──────────────────────────────
+// Sækir downloadUrl fyrir alla 14 stickers (character + silhouette)
+// í bakgrunni eftir login. Kennari getur opnað sticker-sheet áður en
+// þetta klárast — þá birtist emoji sem fallback þangað til myndir koma.
+//
+// Notar einn drive lookup og 28 file metadata kalla. ~6-12 sek alls.
+async function loadStickerImages() {
+  console.log('TONAK StickerImages: bakgrunnshleðsla byrjar —', STICKERS.length * 2, 'myndir');
+  const t0 = performance.now();
+
+  try {
+    const siteId = await getSiteId();
+    const drives = await graphGet(`/sites/${siteId}/drives`);
+    const drive = (drives.value || []).find(d => d.name === 'StickerImages');
+
+    if (!drive) {
+      console.error('TONAK StickerImages: StickerImages library fannst ekki — emoji fallback');
+      return;
+    }
+
+    let loaded = 0, failed = 0;
+
+    // Sækja allar myndir samhliða (Promise.all) — Graph API hefur engin alvarleg rate limits á 28 köllum
+    await Promise.all(STICKERS.map(async (s) => {
+      const fetchOne = async (folder, filename, key) => {
+        try {
+          const itemUrl = `/drives/${drive.id}/root:/${encodeURIComponent(folder + '/' + filename)}`;
+          const item = await graphGet(itemUrl);
+          const url = item['@microsoft.graph.downloadUrl'];
+          if (url) {
+            s[key] = url;
+            loaded++;
+          }
+        } catch(e) {
+          console.warn('TONAK StickerImages: vantar', folder + '/' + filename);
+          failed++;
+        }
+      };
+
+      await Promise.all([
+        fetchOne('Characters', `${s.name}.png`, 'imgFull'),
+        fetchOne('Silhouettes', `${s.name} silhouette.png`, 'imgLocked')
+      ]);
+    }));
+
+    const t1 = performance.now();
+    console.log(`TONAK StickerImages: tilbúið — ${loaded} myndir hlaðnar, ${failed} vantar (${Math.round(t1 - t0)}ms)`);
+
+    // Endurteiknað sticker-sheet ef það er opið núna (kennari beið eftir myndum)
+    if (document.getElementById('sticker-sheet').classList.contains('active') && activeStickerStudentId) {
+      const s = STUDENTS.find(x => x.id === activeStickerStudentId);
+      if (s) renderStickerGrid(s.pracDays >= 5);
+    }
+  } catch(e) {
+    console.error('TONAK StickerImages villa:', e);
   }
 }
 
