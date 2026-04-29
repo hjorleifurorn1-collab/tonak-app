@@ -644,17 +644,18 @@ async function getListItems(listName, filter) {
 // áður en allt UI-ið er byggt á þessu.
 //
 // Notkun í console:
-//   const url = await testStickerImage('Fjórðuparts Finnur', 'character');
-//   // eða: await testStickerImage('Fjórðuparts Finnur', 'silhouette');
+//   const url = await testStickerImage('janus-finnur', 'character');
+//   // eða: await testStickerImage('janus-finnur', 'silhouette');
 //   // Set inn í test img: document.body.innerHTML += `<img src="${url}">`;
-async function testStickerImage(title, type='character') {
-  console.log('TONAK testStickerImage:', title, type);
+async function testStickerImage(stickerId, type='character') {
+  console.log('TONAK testStickerImage:', stickerId, type);
   try {
     const siteId = await getSiteId();
 
-    // Slóð í document library: /Characters/<title>.png eða /Silhouettes/<title> silhouette.png
+    // Slóð í document library byggð á StickerId:
+    //   Characters/<stickerId>.png  eða  Silhouettes/<stickerId>-silhouette.png
     const folder = type === 'silhouette' ? 'Silhouettes' : 'Characters';
-    const filename = type === 'silhouette' ? `${title} silhouette.png` : `${title}.png`;
+    const filename = type === 'silhouette' ? `${stickerId}-silhouette.png` : `${stickerId}.png`;
     const itemPath = `${folder}/${filename}`;
 
     console.log('TONAK testStickerImage: leita að', itemPath);
@@ -933,6 +934,7 @@ async function loadStickerImages() {
     let loaded = 0, failed = 0;
 
     // Sækja allar myndir samhliða (Promise.all) — Graph API hefur engin alvarleg rate limits á 28 köllum
+    // Notar StickerId (s.id) sem skráarnafn — t.d. "janus-finnur.png" / "janus-finnur-silhouette.png"
     await Promise.all(STICKERS.map(async (s) => {
       const fetchOne = async (folder, filename, key) => {
         try {
@@ -950,8 +952,8 @@ async function loadStickerImages() {
       };
 
       await Promise.all([
-        fetchOne('Characters', `${s.name}.png`, 'imgFull'),
-        fetchOne('Silhouettes', `${s.name} silhouette.png`, 'imgLocked')
+        fetchOne('Characters', `${s.id}.png`, 'imgFull'),
+        fetchOne('Silhouettes', `${s.id}-silhouette.png`, 'imgLocked')
       ]);
     }));
 
