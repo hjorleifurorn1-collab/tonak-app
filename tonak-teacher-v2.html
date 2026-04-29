@@ -638,6 +638,57 @@ async function getListItems(listName, filter) {
   return (data.value || []).map(item => ({ ...item.fields, _id: item.id }));
 }
 
+// ── STICKER IMAGE LOADER (TEST) ────────────────────────────────────
+// Test-fall: sækir eina sticker mynd úr StickerImages document library
+// og skilar object URL. Notað til að sannreyna að Graph API path virki
+// áður en allt UI-ið er byggt á þessu.
+//
+// Notkun í console:
+//   const url = await testStickerImage('Fjórðuparts Finnur', 'character');
+//   // eða: await testStickerImage('Fjórðuparts Finnur', 'silhouette');
+//   // Set inn í test img: document.body.innerHTML += `<img src="${url}">`;
+async function testStickerImage(title, type='character') {
+  console.log('TONAK testStickerImage:', title, type);
+  try {
+    const siteId = await getSiteId();
+
+    // Slóð í document library: /Characters/<title>.png eða /Silhouettes/<title> silhouette.png
+    const folder = type === 'silhouette' ? 'Silhouettes' : 'Characters';
+    const filename = type === 'silhouette' ? `${title} silhouette.png` : `${title}.png`;
+    const itemPath = `${folder}/${filename}`;
+
+    console.log('TONAK testStickerImage: leita að', itemPath);
+
+    // 1. Finna drive (document library) sem heitir StickerImages
+    const drives = await graphGet(`/sites/${siteId}/drives`);
+    const drive = (drives.value || []).find(d => d.name === 'StickerImages');
+    if (!drive) {
+      console.error('TONAK testStickerImage: StickerImages library fannst ekki');
+      console.log('TONAK testStickerImage: librararies í síðunni:', drives.value.map(d => d.name));
+      return null;
+    }
+    console.log('TONAK testStickerImage: drive ID =', drive.id);
+
+    // 2. Sækja skrá-metadata til að fá @microsoft.graph.downloadUrl
+    const itemUrl = `/drives/${drive.id}/root:/${encodeURIComponent(itemPath)}`;
+    console.log('TONAK testStickerImage: Graph URL =', itemUrl);
+    const item = await graphGet(itemUrl);
+    console.log('TONAK testStickerImage: skrá fundin —', item.name, item.size, 'bytes');
+
+    // 3. downloadUrl er pre-signed — virkar án auth í <img src>
+    const downloadUrl = item['@microsoft.graph.downloadUrl'];
+    if (!downloadUrl) {
+      console.error('TONAK testStickerImage: enginn downloadUrl');
+      return null;
+    }
+    console.log('TONAK testStickerImage: ✓ tókst — downloadUrl byrjar á:', downloadUrl.substring(0, 80) + '...');
+    return downloadUrl;
+  } catch(e) {
+    console.error('TONAK testStickerImage villa:', e.message);
+    return null;
+  }
+}
+
 const WEEKDAYS_IS = ['Sunnudagur','Mánudagur','Þriðjudagur','Miðvikudagur','Fimmtudagur','Föstudagur','Laugardagur'];
 let _staffId = null;
 let _skolaarId = null;
