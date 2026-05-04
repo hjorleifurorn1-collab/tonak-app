@@ -707,6 +707,7 @@ async function testStickerImage(stickerId, type='character') {
 const WEEKDAYS_IS = ['Sunnudagur','Mánudagur','Þriðjudagur','Miðvikudagur','Fimmtudagur','Föstudagur','Laugardagur'];
 let _staffId = null;
 let _skolaarId = null;
+let _skolaarTitle = '';
 
 async function loadTeacherData() {
   const loadEl = document.getElementById('sp-loading');
@@ -728,10 +729,13 @@ async function loadTeacherData() {
     }
     _staffId = staffRecord._id;
 
-    // Sækja skólaár ID
+    // Sækja skólaár ID og strengja-titil
     const settings = await getListItems('Settings');
     const activeSkolaAr = settings.find(s => s.Active === true);
-    if (activeSkolaAr) _skolaarId = activeSkolaAr._id;
+    if (activeSkolaAr) {
+      _skolaarId = activeSkolaAr._id;
+      _skolaarTitle = activeSkolaAr.Skolaar || activeSkolaAr.Title || '';
+    }
 
     // 2. Finna RoomSlots kennara í dag — sækja alla og sía client-side
     const slots = await getListItems('RoomSlots');
@@ -849,6 +853,10 @@ let STICKERS = [
 let activeStudentId = null;
 let activeAtt = null;
 let activeStickerStudentId = null;
+let _pendingAttendanceLogId = null; // ID á AttendanceLog færslunni sem hafði pending — uppfært í openStickerSheet, hreinsað eftir POST
+
+// TA-StickerAward HTTP trigger URL
+const TA_STICKER_AWARD_URL = 'https://defaultfce2332bf493407ea472f173f9a0af.ea.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/4b62ab7241f140dea0d16ffe98373e03/triggers/manual/paths/invoke?api-version=1';
 let selectedStickerId = null;
 let veikurSent = false;
 let snackTimer = null;
@@ -1877,6 +1885,7 @@ async function openStickerSheet(id, e){
   e.stopPropagation();
   activeStickerStudentId = id;
   selectedStickerId = null;
+  _pendingAttendanceLogId = null;
   const s = STUDENTS.find(x=>x.id===id);
   const rareUnlocked = s.pracDays >= 5;
 
@@ -1893,6 +1902,36 @@ async function openStickerSheet(id, e){
   // Sækja owned status úr SharePoint og endurteiknað grid
   await loadStudentCollection(s.spStudentId);
   renderStickerGrid(rareUnlocked);
+
+  // Finna AttendanceLog færsluna sem hafði pending — þarf í POST seinna
+  if (s.spStudentId) {
+    try {
+      const allAtt = await getListItems('AttendanceLog');
+      const studentIdNum = Number(s.spStudentId);
+      // Mánudagur þessarar viku
+      const now = new Date();
+      const dayOfWeek = now.getDay();
+      const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+      const monday = new Date(now);
+      monday.setDate(now.getDate() - daysToMonday);
+      monday.setHours(0, 0, 0, 0);
+      const mondayMs = monday.getTime();
+      const pending = allAtt.find(a => {
+        if (Number(a.StudentLookupId) !== studentIdNum) return false;
+        if (a.PendingStickerAward !== true) return false;
+        const ad = a.AttendanceDate ? new Date(a.AttendanceDate).getTime() : 0;
+        return ad >= mondayMs;
+      });
+      if (pending) {
+        _pendingAttendanceLogId = Number(pending._id);
+        console.log('TONAK confirmSticker: pending AttendanceLog ID =', _pendingAttendanceLogId);
+      } else {
+        console.warn('TONAK confirmSticker: ekkert pending AttendanceLog fannst — POST verður án attendanceLogId');
+      }
+    } catch(err) {
+      console.error('TONAK confirmSticker: villa við að finna pending AttendanceLog', err);
+    }
+  }
 }
 
 function closeStickerSheet(e){
@@ -2018,10 +2057,12 @@ function updateStickerConfirm(){
   }
 }
 
-function confirmSticker(){
+async function confirmSticker(){
   if(!selectedStickerId) return;
   const s = STICKERS.find(x=>x.id===selectedStickerId);
   const student = STUDENTS.find(x=>x.id===activeStickerStudentId);
+
+  // 1. Uppfæra UI strax — stamp animation kviknar án þess að bíða eftir POST
   s.owned = true;
   student.sticker = 'picked';
 
@@ -2051,6 +2092,43 @@ function confirmSticker(){
   const se=document.getElementById('st-emoji');
   se.style.animation='none';se.offsetHeight;se.style.animation='';
   showScreen('stamp-overlay');
+
+  // 2. POST á TA-StickerAward flæðið í bakgrunni — ef mistekst, sýnum villu yfir stamp
+  try {
+    const payload = {
+      nemandaId: Number(student.spStudentId),
+      kennaraId: Number(_staffId),
+      stickerId: s.id,
+      serie: s.serie || '',
+      tier: s.rare ? 'Rare' : 'Common',
+      earnedBy: 'InPerson',
+      skolaar: _skolaarTitle || '',
+      attendanceLogId: _pendingAttendanceLogId || 0
+    };
+    console.log('TONAK TA-StickerAward POST:', payload);
+
+    const res = await fetch(TA_STICKER_AWARD_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error('HTTP ' + res.status + ': ' + errText);
+    }
+    console.log('TONAK TA-StickerAward: ✓ vistað í StickerCollection');
+  } catch (err) {
+    console.error('TONAK TA-StickerAward villa:', err);
+    // Bæta villuboðum við stamp screen
+    s.owned = false; // rolla aftur — pending er enn yes
+    student.sticker = null;
+    const errBanner = document.createElement('div');
+    errBanner.style.cssText = 'position:absolute;top:80px;left:20px;right:20px;background:rgba(220,38,38,0.95);color:#fff;padding:14px 16px;border-radius:12px;font-size:13px;line-height:1.4;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,0.4)';
+    errBanner.innerHTML = '⚠️ Tókst ekki að vista í safnið — reyndu aftur. Tæknileg villa: ' + err.message;
+    document.getElementById('stamp-overlay').appendChild(errBanner);
+    setTimeout(() => errBanner.remove(), 6000);
+  }
 }
 
 function sendToParent(){
