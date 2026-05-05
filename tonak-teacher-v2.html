@@ -1928,6 +1928,7 @@ async function saveAtt(){
     };
     if (athugasemd) fields.Notes = athugasemd;
     if (shouldFlagPending) fields.PendingStickerAward = true;
+    console.log('TONAK saveAtt: sendi til SharePoint —', JSON.stringify(fields));
     await graphPost('/sites/' + siteId + '/lists/AttendanceLog/items', { fields });
 
     // Uppfæra student state svo render birti rétta sticker hnappinn
