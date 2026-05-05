@@ -800,6 +800,7 @@ async function loadTeacherData() {
     // og hvaða nemendur eru þegar með mætingu í dag
     try {
       const allAtt = await getListItems('AttendanceLog');
+      console.log('TONAK: AttendanceLog færslur sóttar —', allAtt.length, 'færslur');
       const now = new Date();
       const dayOfWeek = now.getDay();
       const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
@@ -835,6 +836,7 @@ async function loadTeacherData() {
             return ad >= todayStartMs && ad <= todayEndMs;
           })
           .sort((a,b) => new Date(b.AttendanceDate) - new Date(a.AttendanceDate))[0];
+        console.log('TONAK: nemandi', s.name, '(scheduleId:', s.spScheduleId, ') mæting í dag:', todayAtt ? todayAtt.Status : 'engin');
         if (todayAtt && todayAtt.Status) {
           s.status = stadaReverseMap[todayAtt.Status] || null;
         }
