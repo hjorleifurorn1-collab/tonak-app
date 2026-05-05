@@ -797,7 +797,7 @@ async function loadTeacherData() {
     STUDENTS.sort((a, b) => a.time.localeCompare(b.time));
 
     // Athuga hvaða nemendur hafa nú þegar pending límmiða þessa viku
-    // (frá fyrri mætingum í vikunni — t.d. mánudagur þegar í dag er þriðjudagur)
+    // og hvaða nemendur eru þegar með mætingu í dag
     try {
       const allAtt = await getListItems('AttendanceLog');
       const now = new Date();
@@ -808,7 +808,17 @@ async function loadTeacherData() {
       monday.setHours(0, 0, 0, 0);
       const mondayMs = monday.getTime();
 
+      const todayStart = new Date(now);
+      todayStart.setHours(0, 0, 0, 0);
+      const todayEnd = new Date(now);
+      todayEnd.setHours(23, 59, 59, 999);
+      const todayStartMs = todayStart.getTime();
+      const todayEndMs = todayEnd.getTime();
+
+      const stadaReverseMap = {'Mætti':'present', 'Seinn':'late', 'Fjarverandi':'absent', 'Forföll tilkynnt':'forfoll'};
+
       STUDENTS.forEach(s => {
+        // Pending límmiði þessa viku
         const hasPending = allAtt.some(a => {
           if (Number(a.StudentLookupId) !== Number(s.spStudentId)) return false;
           if (a.PendingStickerAward !== true) return false;
@@ -816,9 +826,44 @@ async function loadTeacherData() {
           return ad >= mondayMs;
         });
         if (hasPending) s.hasPending = true;
+
+        // Mæting í dag — finna nýjustu færslu þennan dag fyrir þennan nemanda á þessum tíma
+        const todayAtt = allAtt
+          .filter(a => {
+            if (Number(a.StudentScheduleLookupId) !== Number(s.spScheduleId)) return false;
+            const ad = a.AttendanceDate ? new Date(a.AttendanceDate).getTime() : 0;
+            return ad >= todayStartMs && ad <= todayEndMs;
+          })
+          .sort((a,b) => new Date(b.AttendanceDate) - new Date(a.AttendanceDate))[0];
+        if (todayAtt && todayAtt.Status) {
+          s.status = stadaReverseMap[todayAtt.Status] || null;
+        }
       });
     } catch(e) {
-      console.warn('TONAK: Gat ekki hlaðið pending status fyrir nemendur:', e);
+      console.warn('TONAK: Gat ekki hlaðið mætingar/pending status:', e);
+    }
+
+    // Athuga hvaða nemendur hafa þegar fengið límmiða þessa viku
+    try {
+      const allCol = await getListItems('StickerCollection');
+      const now = new Date();
+      const dayOfWeek = now.getDay();
+      const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+      const monday = new Date(now);
+      monday.setDate(now.getDate() - daysToMonday);
+      monday.setHours(0, 0, 0, 0);
+      const mondayMs = monday.getTime();
+
+      STUDENTS.forEach(s => {
+        const earnedThisWeek = allCol.some(c => {
+          if (Number(c.StudentLookupId) !== Number(s.spStudentId)) return false;
+          const ed = c.EarnedDate ? new Date(c.EarnedDate).getTime() : 0;
+          return ed >= mondayMs;
+        });
+        if (earnedThisWeek) s.sticker = 'picked';
+      });
+    } catch(e) {
+      console.warn('TONAK: Gat ekki hlaðið sticker status:', e);
     }
 
     render();
