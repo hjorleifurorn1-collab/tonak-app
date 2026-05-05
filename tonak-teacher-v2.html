@@ -1885,6 +1885,7 @@ async function saveAtt(){
 
     // Uppfæra student state svo render birti rétta sticker hnappinn
     s.hasPending = shouldFlagPending;
+    render();
 
     snack(shouldFlagPending ? '✓ Mæting vistuð — límmiði bíður' : '✓ Mæting vistuð í SharePoint');
 
