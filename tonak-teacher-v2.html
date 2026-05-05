@@ -620,18 +620,21 @@ async function graphGet(url) {
 
 async function graphPost(url, body, method='POST') {
   const token = await getAccessToken();
-  const r = await fetch(GRAPH_BASE + url, {
+  const opts = {
     method: method,
     headers: {
       'Authorization': 'Bearer ' + token,
       'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(body)
-  });
+    }
+  };
+  if (body !== null && body !== undefined) {
+    opts.body = JSON.stringify(body);
+  }
+  const r = await fetch(GRAPH_BASE + url, opts);
   if (!r.ok) {
     const errBody = await r.json().catch(() => ({}));
-    console.error('Graph POST villa nánar:', JSON.stringify(errBody));
-    throw new Error('Graph POST ' + r.status + ': ' + url);
+    console.error('Graph ' + method + ' villa nánar:', JSON.stringify(errBody));
+    throw new Error('Graph ' + method + ' ' + r.status + ': ' + url);
   }
   if (r.status === 204) return {};
   return r.json();
@@ -1217,8 +1220,10 @@ const VIKUDAGS = getWeekDates();
 
 let MATSEDILL = [];
 
-// Pantanir þessarar viku — í alvöru: sóttar úr MatPantanir í SharePoint
+// Pantanir þessarar viku — sóttar úr MatarPantanir í SharePoint
 const PANTANIR = Object.fromEntries(VIKUDAGS.map(d => [d, null]));
+// SharePoint ID á MatarPantanir færslu (ef til) — notað til PATCH í stað POST
+const PANTANIR_ID = Object.fromEntries(VIKUDAGS.map(d => [d, null]));
 
 async function loadMatseðill() {
   try {
@@ -1227,18 +1232,43 @@ async function loadMatseðill() {
 
     MATSEDILL = VIKUDAGS.map((dags, i) => {
       const sp = vikuMatur.find(m => m.Dagsetning?.split('T')[0] === dags);
-      const fri = !sp || (!sp.ValmoguleikiA && !sp.ValmoguleikiB && !sp.ValmoguleikiC);
+      // SharePoint encodear ö sem _x00f6_ í innra nafn dálka. Notum það sem er til.
+      const A = sp?.ValmoguleikiA || sp?.Valm_x00f6_guleikiA || '';
+      const B = sp?.ValmoguleikiB || sp?.Valm_x00f6_guleikiB || '';
+      const C = sp?.ValmoguleikiC || sp?.Valm_x00f6_guleikiC || '';
+      const D = sp?.ValmoguleikiD || sp?.Valm_x00f6_guleikiD || '';
+      const E = sp?.ValmoguleikiE || sp?.Valm_x00f6_guleikiE || '';
+      const fri = !sp || (!A && !B && !C);
       return {
         dagur: VIKUDAGAR[i],
         dags: dags,
         fri: fri,
-        A: sp?.ValmoguleikiA || '',
-        B: sp?.ValmoguleikiB || '',
-        C: sp?.ValmoguleikiC || '',
-        D: sp?.ValmoguleikiD || '',
-        E: sp?.ValmoguleikiE || '',
+        A: A, B: B, C: C, D: D, E: E,
       };
     });
+
+    // Sækja eigin pantanir kennara þessa viku
+    try {
+      const allPantanir = await getListItems('MatarPantanir');
+      const minar = allPantanir.filter(p =>
+        Number(p.StarfsmadurLookupId) === Number(_staffId) &&
+        VIKUDAGS.includes(p.Dagsetning?.split('T')[0])
+      );
+      // Reset
+      VIKUDAGS.forEach(d => { PANTANIR[d] = null; PANTANIR_ID[d] = null; });
+      // Fylla
+      minar.forEach(p => {
+        const dags = p.Dagsetning?.split('T')[0];
+        if (dags && PANTANIR.hasOwnProperty(dags)) {
+          PANTANIR[dags] = p.Valmoguleiki || null;
+          PANTANIR_ID[dags] = Number(p._id);
+        }
+      });
+      console.log('TONAK MatarPantanir:', minar.length, 'pantanir hlaðnar');
+    } catch(e) {
+      console.warn('TONAK MatarPantanir villa:', e);
+    }
+
     renderMatur();
   } catch(e) {
     console.error('TONAK Matseðill villa:', e);
@@ -1248,7 +1278,7 @@ async function loadMatseðill() {
 function isCutoff(dags) {
   const now = new Date();
   const dagur = new Date(dags);
-  dagur.setHours(10, 0, 0, 0);
+  dagur.setHours(9, 45, 0, 0);
   return now >= dagur;
 }
 
@@ -1256,11 +1286,50 @@ function velaMat(dags, val) {
   PANTANIR[dags] = val === '' ? null : val;
 }
 
-function vistaMatPontun(dags) {
+async function vistaMatPontun(dags) {
   if(isCutoff(dags)) { snack('Pöntunarfrestur liðinn — hafðu samband við Fanneyju'); return; }
   const val = PANTANIR[dags];
-  // Í alvöru: POST/PATCH á MatPantanir í SharePoint
-  snack(val ? `✓ Pöntun vistuð — ${val}` : '✓ Pöntun afpöntuð');
+  const existingId = PANTANIR_ID[dags];
+
+  try {
+    const siteId = await getSiteId();
+
+    if (val) {
+      // Pöntun valin — POST eða PATCH
+      const fields = {
+        Title: dags + ' — ' + (currentUser?.name || 'Kennari'),
+        StarfsmadurLookupId: Number(_staffId),
+        Dagsetning: dags + 'T00:00:00Z',
+        Valmoguleiki: val,
+        SkradDags: new Date().toISOString(),
+        SkolaarLookupId: _skolaarId ? Number(_skolaarId) : undefined
+      };
+
+      if (existingId) {
+        // Uppfæra fyrri pöntun
+        await graphPost('/sites/' + siteId + '/lists/MatarPantanir/items/' + existingId + '/fields', fields, 'PATCH');
+        snack('✓ Pöntun uppfærð — ' + val);
+      } else {
+        // Ný pöntun
+        const resp = await graphPost('/sites/' + siteId + '/lists/MatarPantanir/items', { fields });
+        if (resp?.id) PANTANIR_ID[dags] = Number(resp.id);
+        snack('✓ Pöntun vistuð — ' + val);
+      }
+    } else {
+      // Engin val — afpanta með því að eyða (ef færsla er til)
+      if (existingId) {
+        await graphPost('/sites/' + siteId + '/lists/MatarPantanir/items/' + existingId, null, 'DELETE');
+        PANTANIR_ID[dags] = null;
+        snack('✓ Pöntun afpöntuð');
+      } else {
+        snack('Engin pöntun valin');
+      }
+    }
+  } catch(e) {
+    console.error('TONAK MatarPantanir vistun villa:', e);
+    snack('⚠ Villa við vistun — reyndu aftur');
+  }
+
   renderMatur();
 }
 
