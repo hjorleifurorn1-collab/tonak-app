@@ -785,6 +785,7 @@ async function loadTeacherData() {
         status: null,
         pracDays: 0,
         sticker: null,
+        hasPending: false, // Verður true þegar saveAttendance flaggar pending
         spScheduleId: sch._id,
         spSlotId: slot?._id,
         spStudentId: sch.StudentLookupId,
@@ -794,6 +795,32 @@ async function loadTeacherData() {
 
     // Raða eftir tíma
     STUDENTS.sort((a, b) => a.time.localeCompare(b.time));
+
+    // Athuga hvaða nemendur hafa nú þegar pending límmiða þessa viku
+    // (frá fyrri mætingum í vikunni — t.d. mánudagur þegar í dag er þriðjudagur)
+    try {
+      const allAtt = await getListItems('AttendanceLog');
+      const now = new Date();
+      const dayOfWeek = now.getDay();
+      const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+      const monday = new Date(now);
+      monday.setDate(now.getDate() - daysToMonday);
+      monday.setHours(0, 0, 0, 0);
+      const mondayMs = monday.getTime();
+
+      STUDENTS.forEach(s => {
+        const hasPending = allAtt.some(a => {
+          if (Number(a.StudentLookupId) !== Number(s.spStudentId)) return false;
+          if (a.PendingStickerAward !== true) return false;
+          const ad = a.AttendanceDate ? new Date(a.AttendanceDate).getTime() : 0;
+          return ad >= mondayMs;
+        });
+        if (hasPending) s.hasPending = true;
+      });
+    } catch(e) {
+      console.warn('TONAK: Gat ekki hlaðið pending status fyrir nemendur:', e);
+    }
+
     render();
 
   } catch(e) {
@@ -1705,7 +1732,7 @@ function render(){
         stickerSection = `<div class="sticker-row"><span class="sticker-sent">✓ Límmiðatilkynning send á forráðamann</span></div>`;
       } else if(s.sticker === 'picked'){
         stickerSection = `<div class="sticker-row"><span class="sticker-sent">✦ Límmiði valinn og vistaður</span></div>`;
-      } else {
+      } else if(s.hasPending){
         const btnCls = rareUnlocked ? 'sticker-btn rare' : 'sticker-btn';
         const btnTxt = rareUnlocked ? '✦ Leyfa límmiðaval — rare opið!' : '✦ Leyfa límmiðaval';
         stickerSection = `<div class="sticker-row">
@@ -1714,6 +1741,7 @@ function render(){
           </div>
         </div>`;
       }
+      // Ef hasPending er false → sticker var þegar gefinn þessa viku → enginn hnappur
     }
 
     return `<div class="student-card ${isDone?'done':isNext?'next':''}" onclick="openAtt(${s.id})">
@@ -1854,6 +1882,10 @@ async function saveAtt(){
     if (athugasemd) fields.Notes = athugasemd;
     if (shouldFlagPending) fields.PendingStickerAward = true;
     await graphPost('/sites/' + siteId + '/lists/AttendanceLog/items', { fields });
+
+    // Uppfæra student state svo render birti rétta sticker hnappinn
+    s.hasPending = shouldFlagPending;
+
     snack(shouldFlagPending ? '✓ Mæting vistuð — límmiði bíður' : '✓ Mæting vistuð í SharePoint');
 
     // Vista heimaverkefni/athugasemd í Heimanam ef til staðar
